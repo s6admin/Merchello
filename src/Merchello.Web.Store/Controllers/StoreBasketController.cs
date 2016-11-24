@@ -11,12 +11,14 @@
     using Merchello.Web.Store.Models.Async;
 
     using Umbraco.Web.Mvc;
+    using Web.Models.Ui;
 
     /// <summary>
     /// The default (generic) basket controller.
     /// </summary>
     [PluginController("Merchello")]
-    public class StoreBasketController : BasketControllerBase<StoreBasketModel, StoreLineItemModel, StoreAddItemModel>
+    public class StoreBasketController<TBasketModel> : BasketControllerBase<TBasketModel, StoreLineItemModel, StoreAddItemModel>
+        where TBasketModel : class, IBasketModel<StoreLineItemModel>, new()
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="StoreBasketController"/> class.
@@ -44,7 +46,7 @@
         /// The <see cref="BasketItemExtendedDataFactory{StoreAddItemModel}"/>.
         /// </param>
         public StoreBasketController(BasketItemExtendedDataFactory<StoreAddItemModel> addItemExtendedDataFactory)
-            : base(addItemExtendedDataFactory, new AddItemModelFactory(), new BasketModelFactory())
+            : base(addItemExtendedDataFactory, new AddItemModelFactory(), new BasketModelFactory<TBasketModel>())
         {
         }
 
@@ -113,7 +115,7 @@
         /// <remarks>
         /// Handles the customization of the redirection after a custom update basket operation
         /// </remarks>
-        protected override ActionResult HandleUpdateBasketSuccess(StoreBasketModel model)
+        protected override ActionResult HandleUpdateBasketSuccess(TBasketModel model)
         {
             if (Request.IsAjaxRequest())
             {
