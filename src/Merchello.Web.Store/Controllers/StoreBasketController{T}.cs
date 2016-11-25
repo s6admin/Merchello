@@ -17,7 +17,7 @@
     /// The default (generic) basket controller.
     /// </summary>
     [PluginController("Merchello")]
-    public class StoreBasketController<TBasketModel> : BasketControllerBase<TBasketModel, StoreLineItemModel, StoreAddItemModel>
+    public abstract class StoreBasketController<TBasketModel> : BasketControllerBase<TBasketModel, StoreLineItemModel, StoreAddItemModel>
         where TBasketModel : class, IBasketModel<StoreLineItemModel>, new()
     {
         /// <summary>
