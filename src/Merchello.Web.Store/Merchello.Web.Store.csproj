@@ -256,7 +256,7 @@
   <ItemGroup>
     <Compile Include="Controllers\Api\CountryRegionApiController.cs" />
     <Compile Include="Controllers\Api\ProductDataTableApiController.cs" />
-    <Compile Include="Controllers\StoreBasketController.cs" />
+    <Compile Include="Controllers\StoreBasketController{T}.cs" />
     <Compile Include="Controllers\CheckoutDiscountController.cs" />
     <Compile Include="Controllers\CheckoutResolvePaymentController.cs" />
     <Compile Include="Controllers\CustomerMembershipController.cs" />
