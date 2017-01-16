@@ -280,26 +280,25 @@
         public virtual ActionResult BasketForm(string view = "")
         {
             var model = this._basketModelFactory.Create(this.Basket);
-            return view.IsNullOrWhiteSpace() ? this.PartialView(model) : this.PartialView(view, model);
+			return view.IsNullOrWhiteSpace() ? this.PartialView(model) : this.PartialView(view, model);
         }
 
-
-        /// <summary>
-        /// Responsible for rendering the Add Item Form.
-        /// </summary>
-        /// <param name="model">
-        /// The <see cref="IProductContent"/>.
-        /// </param>
-        /// <param name="quantity">
-        /// The quantity to be added
-        /// </param>
-        /// <param name="view">
-        /// The name of the view to render.
-        /// </param>
-        /// <returns>
-        /// The <see cref="ActionResult"/>.
-        /// </returns>
-        [ChildActionOnly]
+		/// <summary>
+		/// Responsible for rendering the Add Item Form.
+		/// </summary>
+		/// <param name="model">
+		/// The <see cref="IProductContent"/>.
+		/// </param>
+		/// <param name="quantity">
+		/// The quantity to be added
+		/// </param>
+		/// <param name="view">
+		/// The name of the view to render.
+		/// </param>
+		/// <returns>
+		/// The <see cref="ActionResult"/>.
+		/// </returns>
+		[ChildActionOnly]
         public virtual ActionResult AddProductToBasketForm(IProductContent model, int quantity = 1, string view = "AddToBasketForm")
         {
             var addItem = this._addItemFactory.Create(model, quantity);

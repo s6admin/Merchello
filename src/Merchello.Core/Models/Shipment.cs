@@ -182,52 +182,55 @@
         private string _trackingCode;
         private LineItemCollection _items;
 
-        #endregion
+		#endregion
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Shipment"/> class.
-        /// </summary>
-        /// <param name="shipmentStatus">
-        /// The shipment Status.
-        /// </param>
-        internal Shipment(IShipmentStatus shipmentStatus)
+		/// <summary>
+		/// Initializes a new instance of the <see cref="Shipment"/> class.
+		/// </summary>
+		/// <param name="shipmentStatus">
+		/// The shipment Status.
+		/// </param>
+		/// S6 Was internal but needed in SMODefaultPackagingStrategy. Would prefer PROTECTED but that requires modifications to nearly 10 other Core files.
+		public Shipment(IShipmentStatus shipmentStatus)
             : this(shipmentStatus, new Address(), new Address(), new LineItemCollection())
         {
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Shipment"/> class.
-        /// </summary>
-        /// <param name="shipmentStatus">
-        /// The shipment Status.
-        /// </param>
-        /// <param name="origin">
-        /// The origin.
-        /// </param>
-        /// <param name="destination">
-        /// The destination.
-        /// </param>
-        internal Shipment(IShipmentStatus shipmentStatus, IAddress origin, IAddress destination)
+		/// <summary>
+		/// Initializes a new instance of the <see cref="Shipment"/> class.
+		/// </summary>
+		/// <param name="shipmentStatus">
+		/// The shipment Status.
+		/// </param>
+		/// <param name="origin">
+		/// The origin.
+		/// </param>
+		/// <param name="destination">
+		/// The destination.
+		/// </param>
+		/// S6 Was internal but needed in SMODefaultPackagingStrategy. Would prefer PROTECTED but that requires modifications to nearly 10 other Core files.
+		public Shipment(IShipmentStatus shipmentStatus, IAddress origin, IAddress destination)
             : this(shipmentStatus, origin, destination, new LineItemCollection())
         {
         }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="Shipment"/> class.
-        /// </summary>
-        /// <param name="shipmentStatus">
-        /// The shipment Status.
-        /// </param>
-        /// <param name="origin">
-        /// The origin.
-        /// </param>
-        /// <param name="destination">
-        /// The destination.
-        /// </param>
-        /// <param name="items">
-        /// The items.
-        /// </param>
-        internal Shipment(IShipmentStatus shipmentStatus, IAddress origin, IAddress destination, LineItemCollection items)
+		/// <summary>
+		/// Initializes a new instance of the <see cref="Shipment"/> class.
+		/// </summary>
+		/// <param name="shipmentStatus">
+		/// The shipment Status.
+		/// </param>
+		/// <param name="origin">
+		/// The origin.
+		/// </param>
+		/// <param name="destination">
+		/// The destination.
+		/// </param>
+		/// <param name="items">
+		/// The items.
+		/// </param>
+		/// S6 Was internal but needed in SMODefaultPackagingStrategy. Would prefer PROTECTED but that requires modifications to nearly 10 other Core files.
+		public Shipment(IShipmentStatus shipmentStatus, IAddress origin, IAddress destination, LineItemCollection items)
         {
             Mandate.ParameterNotNull(shipmentStatus, "shipmentStatus");
             Mandate.ParameterNotNull(origin, "origin");

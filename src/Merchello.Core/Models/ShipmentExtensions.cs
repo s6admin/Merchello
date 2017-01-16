@@ -338,7 +338,9 @@ namespace Merchello.Core.Models
         /// <remarks>
         /// http://issues.merchello.com/youtrack/issue/M-458
         /// </remarks>
-        internal static IShipment Clone(this IShipment org)
+		/// 
+		// S6 Changed from internal to public so we could create our own RateQuote Strategy in merchello.config
+        public static IShipment Clone(this IShipment org)
         {
             var lineItemCollection = new LineItemCollection();
 

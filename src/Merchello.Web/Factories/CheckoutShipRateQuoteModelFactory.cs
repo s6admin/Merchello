@@ -63,7 +63,7 @@
         /// The modified <see cref="ICheckoutShipRateQuoteModel"/>.
         /// </returns>
         public TShipRateQuoteModel Create(IBasket basket, IAddress destination, bool tryGetCached = true)
-        {
+        {			
             var shipment = basket.PackageBasket(destination).FirstOrDefault();
 
             var quotes = (shipment != null
@@ -88,6 +88,7 @@
             return OnCreate(model, basket, destination);
         }
 
+		// S6 marking as virtual so custom factory overrides can be implemented as advertised
         /// <summary>
         /// Allows for overriding the creation of <see cref="ICheckoutShipRateQuoteModel"/>.
         /// </summary>
@@ -103,7 +104,7 @@
         /// <returns>
         /// The modified <see cref="ICheckoutShipRateQuoteModel"/>.
         /// </returns>
-        protected TShipRateQuoteModel OnCreate(TShipRateQuoteModel model, IBasket basket, IAddress address)
+        protected virtual TShipRateQuoteModel OnCreate(TShipRateQuoteModel model, IBasket basket, IAddress address)
         {
             return model;
         }

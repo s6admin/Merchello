@@ -121,7 +121,8 @@
         /// The <see cref="ActionResult"/>.
         /// </returns>
         [ChildActionOnly]
-        public ActionResult ShipRateQuoteForm(string view = "")
+		// S6 Marked as virtual so we can override and assert our own shipping logic when needed
+        public virtual ActionResult ShipRateQuoteForm(string view = "")
         {
             var shippingAddress = CheckoutManager.Customer.GetShipToAddress();
             if (shippingAddress == null) return InvalidCheckoutStagePartial();

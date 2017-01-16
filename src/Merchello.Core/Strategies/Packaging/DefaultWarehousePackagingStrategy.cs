@@ -92,6 +92,7 @@
             var origin = warehouse.AsAddress();
             
             ////For the initial version we are only exposing a single shipment
+			
             var shipment = new Shipment(quoted, origin, Destination)
                 {
                     VersionKey = VersionKey // this is used in cache keys
