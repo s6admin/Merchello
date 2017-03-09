@@ -4,8 +4,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using System.Web.Mvc;
-
-    using Merchello.Core;
+	    
     using Merchello.Core.Logging;
     using Merchello.Core.Models;
     using Merchello.Web;
@@ -19,6 +18,7 @@
 
     using Newtonsoft.Json;
 
+    using Umbraco.Core;
 
     /// <summary>
     /// A base controller used for Basket implementations.
@@ -96,9 +96,9 @@
             AddItemModelFactory<TAddItem> addItemFactory,
             BasketModelFactory<TBasketModel, TBasketItemModel> basketModelFactory)
         {
-            Ensure.ParameterNotNull(basketModelFactory, "basketModelFactory");
-            Ensure.ParameterNotNull(addItemFactory, "addItemFactory");
-            Ensure.ParameterNotNull(addItemExtendedDataFactory, "addItemExtendedDataFactory");
+            Mandate.ParameterNotNull(basketModelFactory, "basketModelFactory");
+            Mandate.ParameterNotNull(addItemFactory, "addItemFactory");
+            Mandate.ParameterNotNull(addItemExtendedDataFactory, "addItemExtendedDataFactory");
 
             this._basketModelFactory = basketModelFactory;
             this._addItemFactory = addItemFactory;
@@ -279,26 +279,25 @@
         public virtual ActionResult BasketForm(string view = "")
         {
             var model = this._basketModelFactory.Create(this.Basket);
-            return view.IsNullOrWhiteSpace() ? this.PartialView(model) : this.PartialView(view, model);
+			return view.IsNullOrWhiteSpace() ? this.PartialView(model) : this.PartialView(view, model);
         }
 
-
-        /// <summary>
-        /// Responsible for rendering the Add Item Form.
-        /// </summary>
-        /// <param name="model">
-        /// The <see cref="IProductContent"/>.
-        /// </param>
-        /// <param name="quantity">
-        /// The quantity to be added
-        /// </param>
-        /// <param name="view">
-        /// The name of the view to render.
-        /// </param>
-        /// <returns>
-        /// The <see cref="ActionResult"/>.
-        /// </returns>
-        [ChildActionOnly]
+		/// <summary>
+		/// Responsible for rendering the Add Item Form.
+		/// </summary>
+		/// <param name="model">
+		/// The <see cref="IProductContent"/>.
+		/// </param>
+		/// <param name="quantity">
+		/// The quantity to be added
+		/// </param>
+		/// <param name="view">
+		/// The name of the view to render.
+		/// </param>
+		/// <returns>
+		/// The <see cref="ActionResult"/>.
+		/// </returns>
+		[ChildActionOnly]
         public virtual ActionResult AddProductToBasketForm(IProductContent model, int quantity = 1, string view = "AddToBasketForm")
         {
             var addItem = this._addItemFactory.Create(model, quantity);

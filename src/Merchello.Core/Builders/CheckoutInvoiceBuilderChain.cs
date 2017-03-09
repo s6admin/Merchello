@@ -75,10 +75,16 @@
             if (unpaid == null)
                 return Attempt<IInvoice>.Fail(new NullReferenceException("Unpaid invoice status query returned null"));
 
-            var invoice = new Invoice(unpaid) { VersionKey = _checkoutManager.Context.VersionKey };
+			//// S6 Implemented manually after review with Rusty 2.21.17
+			//// Invoice needs to be created via the service so that the Creating / Created events get fired.
+			//// see http://issues.merchello.com/youtrack/issue/M-1290
+			var invoice = _checkoutManager.Context.Services.InvoiceService.CreateInvoice(unpaid.Key);
+			invoice.VersionKey = _checkoutManager.Context.VersionKey;
 
-            // Associate a customer with the invoice if it is a known customer.
-            if (!_checkoutManager.Context.Customer.IsAnonymous) invoice.CustomerKey = _checkoutManager.Context.Customer.Key;
+			////var invoice = new Invoice(unpaid) { VersionKey = _checkoutManager.Context.VersionKey };
+
+			// Associate a customer with the invoice if it is a known customer.
+			if (!_checkoutManager.Context.Customer.IsAnonymous) invoice.CustomerKey = _checkoutManager.Context.Customer.Key;
 
             var attempt = TaskHandlers.Any()
                        ? TaskHandlers.First().Execute(invoice)

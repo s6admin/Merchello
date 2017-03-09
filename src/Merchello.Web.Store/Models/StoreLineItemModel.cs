@@ -48,7 +48,7 @@
         /// Gets or sets the SKU.
         /// </summary>
         public string Sku { get; set; }
-
+				
         /// <summary>
         /// Gets or sets the quantity.
         /// </summary>

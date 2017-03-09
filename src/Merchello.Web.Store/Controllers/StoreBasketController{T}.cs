@@ -13,10 +13,11 @@
     using Umbraco.Web.Mvc;
     using Web.Models.Ui;
 
-    /// <summary>
-    /// The default (generic) basket controller.
-    /// </summary>
-    [PluginController("Merchello")]
+	/// <summary>
+	/// The default (generic) basket controller.
+	/// S6 Made StoreBasketController abstract and typed with TBasketModel so we can implement custom model overrides (as dev notes in the original version claim could be done). This involved renaming the file with {T} suffix.
+	/// </summary>
+	[PluginController("Merchello")]
     public abstract class StoreBasketController<TBasketModel> : BasketControllerBase<TBasketModel, StoreLineItemModel, StoreAddItemModel>
         where TBasketModel : class, IBasketModel<StoreLineItemModel>, new()
     {

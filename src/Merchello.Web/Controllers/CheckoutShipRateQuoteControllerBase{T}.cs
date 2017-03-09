@@ -3,11 +3,13 @@
     using System;
     using System.Linq;
     using System.Web.Mvc;
-
-    using Merchello.Core;
+	    
+    using Merchello.Core.Gateways;
+    using Merchello.Core.Models;
     using Merchello.Web.Factories;
     using Merchello.Web.Models.Ui;
-    
+
+    using Umbraco.Core;
 
     /// <summary>
     /// The checkout ship rate quote controller.
@@ -54,7 +56,7 @@
             CheckoutContextSettingsFactory contextSettingsFactory)
             : base(contextSettingsFactory)
         {
-            Ensure.ParameterNotNull(checkoutShipRateQuoteFactory, "checkoutShipRateQuoteFactory");
+            Mandate.ParameterNotNull(checkoutShipRateQuoteFactory, "checkoutShipRateQuoteFactory");
             this.CheckoutShipRateQuoteFactory = checkoutShipRateQuoteFactory;
         }
 
@@ -118,7 +120,8 @@
         /// The <see cref="ActionResult"/>.
         /// </returns>
         [ChildActionOnly]
-        public ActionResult ShipRateQuoteForm(string view = "")
+		// S6 Marked as virtual so we can override and assert our own shipping logic when needed
+        public virtual ActionResult ShipRateQuoteForm(string view = "")
         {
             var shippingAddress = CheckoutManager.Customer.GetShipToAddress();
             if (shippingAddress == null) return InvalidCheckoutStagePartial();

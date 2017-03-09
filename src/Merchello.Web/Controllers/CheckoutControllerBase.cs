@@ -46,7 +46,8 @@
             {
                 if (this._checkoutManager == null)
                 {
-                    this._checkoutManager = this.Basket.GetCheckoutManager(this._contextSettingsFactory.Create());
+
+					this._checkoutManager = this.Basket.GetCheckoutManager(this._contextSettingsFactory.Create());
                 }
 
                 return this._checkoutManager;

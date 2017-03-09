@@ -311,10 +311,14 @@
                 ((Invoice) invoice).InvoiceNumber = _storeSettingService.GetNextInvoiceNumber();
             }
 
-            var includesStatusChange = ((Invoice) invoice).IsPropertyDirty("InvoiceStatusKey") &&
-                                       ((Invoice) invoice).HasIdentity == false;
+			// S6 Added from ticket fix before upgrading to 2.5.0
+			// https://github.com/Merchello/Merchello/commit/5e2425d14d4f5dd0cd60a8993e257d9f1634f2aa
+			//var includesStatusChange = ((Invoice) invoice).IsPropertyDirty("InvoiceStatusKey") &&
+			//                           ((Invoice) invoice).HasIdentity == false;
+			var includesStatusChange = ((Invoice)invoice).IsPropertyDirty("InvoiceStatus") &&
+									   ((Invoice)invoice).HasIdentity == true;
 
-            if (raiseEvents)
+			if (raiseEvents)
             {
                 if (Saving.IsRaisedEventCancelled(new SaveEventArgs<IInvoice>(invoice), this))
                 {
@@ -362,12 +366,19 @@
                 }
             }
 
-            var existingInvoicesWithStatusChanges =
+			// S6 Added from ticket fix before upgrading to 2.5.0
+			// https://github.com/Merchello/Merchello/commit/5e2425d14d4f5dd0cd60a8993e257d9f1634f2aa
+			/*var existingInvoicesWithStatusChanges =
                 invoicesArray.Where(
                     x => ((Invoice) x).HasIdentity == false && ((Invoice) x).IsPropertyDirty("InvoiceStatusKey"))
                     .ToArray();
+			*/
+			var existingInvoicesWithStatusChanges =
+			  invoicesArray.Where(
+				  x => ((Invoice)x).HasIdentity == true && ((Invoice)x).IsPropertyDirty("InvoiceStatus"))
+				  .ToArray();
 
-            if (raiseEvents)
+			if (raiseEvents)
             {
                 Saving.RaiseEvent(new SaveEventArgs<IInvoice>(invoicesArray), this);
                 if (existingInvoicesWithStatusChanges.Any())

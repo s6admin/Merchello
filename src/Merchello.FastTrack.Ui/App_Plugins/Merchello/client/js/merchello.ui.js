@@ -617,6 +617,13 @@ MUI.Basket = {
                             if (subtotal.length > 0) {
                                 $(subtotal).html(item.FormattedTotal);
                             }
+
+							// S6 Display tiered pricing
+							var lblPrice = $(hid).closest('tr').find('.unit-price[data-value="' + item.Key + '"]');                            
+							if (lblPrice.length > 0) {
+								//console.log('item ' + item);
+								$(lblPrice).html(item.UnitPrice);
+							}
                         }
                     });
 

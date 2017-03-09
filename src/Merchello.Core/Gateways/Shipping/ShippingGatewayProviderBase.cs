@@ -184,7 +184,7 @@
         /// If set true the strategy will try to get a quote from cache
         /// </param>
         /// <returns>A collection of <see cref="IShipmentRateQuote"/></returns>
-        public virtual IEnumerable<IShipmentRateQuote> QuoteShippingGatewayMethodsForShipment(IShipment shipment, bool tryGetCached = true)
+        public virtual IEnumerable<IShipmentRateQuote> QuoteShippingGatewayMethodsForShipment(IShipment shipment, bool tryGetCached = false)
         {
             var gatewayShipMethods = GetShippingGatewayMethodsForShipment(shipment);
 

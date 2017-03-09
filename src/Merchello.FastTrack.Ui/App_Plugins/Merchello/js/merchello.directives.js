@@ -2046,7 +2046,7 @@ angular.module('merchello.directives').directive('merchelloListView',
                 };
 
                 scope.options = {
-                    pageSize: scope.config.pageSize ? scope.config.pageSize : 10,
+                	pageSize: scope.config.pageSize ? scope.config.pageSize : 100, // S6, orig 10 --> 100
                     pageNumber: 1,
                     filter: '',
                     orderBy: (scope.config.orderBy ? scope.config.orderBy : 'name').trim(),
@@ -3275,7 +3275,7 @@ angular.module('merchello.directives').directive('productOptionsList', [
             scope.isReady = false;
             scope.noResults = '';
             scope.options = {
-                pageSize: 10,
+                pageSize: 100, // S6 orig 10
                 currentPage: 1,
                 filter: '',
                 orderBy: 'name',
@@ -3924,7 +3924,7 @@ angular.module('merchello.directives').directive('reportWidgetCustomerBaskets',
                     scope.load = load;
                     scope.getColumnValue = getColumnValue;
                     scope.preValuesLoaded = false;
-                    scope.pageSize = 10;
+                    scope.pageSize = 100; // S6 orig 10
 
                     scope.itemLabel = '';
                     scope.skuLabel = '';
