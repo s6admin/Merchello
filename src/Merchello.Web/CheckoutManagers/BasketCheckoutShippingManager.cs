@@ -36,7 +36,7 @@
         {
             this.AddShipmentRateQuoteLineItem(approvedShipmentRateQuote);
             this.Context.Services.ItemCacheService.Save(this.Context.ItemCache);
-
+						
             this.Context.Customer.ExtendedData.AddAddress(approvedShipmentRateQuote.Shipment.GetDestinationAddress(), AddressType.Shipping);
             this.SaveCustomer();
         }

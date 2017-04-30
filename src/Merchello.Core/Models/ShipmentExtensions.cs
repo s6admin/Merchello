@@ -74,7 +74,8 @@ namespace Merchello.Core.Models
         /// <returns>Returns a <see cref="IAddress"/></returns>        
         public static IAddress GetDestinationAddress(this IShipment shipment)
         {
-            return new Address()
+			
+			return new Address()
             {
                 Name = shipment.ToName,
                 Address1 = shipment.ToAddress1,
@@ -86,8 +87,9 @@ namespace Merchello.Core.Models
                 IsCommercial = shipment.ToIsCommercial,
                 Email = shipment.Email,
                 Organization = shipment.ToOrganization,
-                AddressType = AddressType.Shipping
-            };
+                AddressType = AddressType.Shipping,
+				Phone = shipment.Phone // S6 Original GetDestinationAddress does not transfer the Phone property so it always becomes a NULL value in the database
+			};
         }
 
         /// <summary>

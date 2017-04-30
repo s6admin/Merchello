@@ -26,11 +26,12 @@
         [Display(ResourceType = typeof(StoreFormsResource), Name = "LabelAddressLabel")]
         public string Label { get; set; }
 
+		// S6 Marked Organization as virtual so we can override and make it a required field in our custom Model
         /// <summary>
         /// Gets or sets the organization.
         /// </summary>
         [Display(ResourceType = typeof(StoreFormsResource), Name = "LabelOrganization")]
-        public string Organization { get; set; }
+        public virtual string Organization { get; set; }
 
         /// <summary>
         /// Gets or sets the name (full name) of the contact.
@@ -63,7 +64,7 @@
         /// Gets or sets the region or province.
         /// </summary>
         [Display(ResourceType = typeof(StoreFormsResource), Name = "LabelRegion")]
-        public string Region { get; set; }
+        public virtual string Region { get; set; }
 
         /// <summary>
         /// Gets or sets the postal code.
@@ -83,7 +84,7 @@
         /// Gets or sets the contact phone.
         /// </summary>
         [Display(ResourceType = typeof(StoreFormsResource), Name = "LabelPhone")]
-        public string Phone { get; set; }
+        public virtual string Phone { get; set; }
 
         /// <summary>
         /// Gets or sets the email address.

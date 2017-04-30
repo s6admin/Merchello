@@ -118,7 +118,7 @@
         /// </summary>
         public object Value
         {
-            get { return this._objectValue.Value; }
+            get { return this._objectValue.Value; } // S6 AT THIS POINT THE ARCHETYPE DATA IS GONE
         }
 
         /// <summary>
