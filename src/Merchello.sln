@@ -1,4 +1,3 @@
-﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.23107.0
@@ -26,20 +25,20 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Merchello.Tests.Integration
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Merchello.Examine", "Merchello.Examine\Merchello.Examine.csproj", "{28A665A9-2AAD-4230-AB8C-0F0B0F1B2115}"
 EndProject
-Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "Merchello.Web.UI.Client", "http://localhost:55729", "{37C148C6-04CB-4C12-973A-02714528E94B}"
+Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "Merchello.Web.UI.Client(1)", "http://localhost:64756", "{37C148C6-04CB-4C12-973A-02714528E94B}"
 	ProjectSection(WebsiteProperties) = preProject
 		UseIISExpress = "true"
 		TargetFrameworkMoniker = ".NETFramework,Version%3Dv4.5.2"
-		Debug.AspNetCompiler.VirtualPath = "/localhost_55729"
+		Debug.AspNetCompiler.VirtualPath = "/localhost_64756"
 		Debug.AspNetCompiler.PhysicalPath = "Merchello.Web.UI.Client\"
-		Debug.AspNetCompiler.TargetPath = "PrecompiledWeb\localhost_55729\"
+		Debug.AspNetCompiler.TargetPath = "PrecompiledWeb\localhost_64756\"
 		Debug.AspNetCompiler.Updateable = "true"
 		Debug.AspNetCompiler.ForceOverwrite = "true"
 		Debug.AspNetCompiler.FixedNames = "false"
 		Debug.AspNetCompiler.Debug = "True"
-		Release.AspNetCompiler.VirtualPath = "/localhost_55729"
+		Release.AspNetCompiler.VirtualPath = "/localhost_64756"
 		Release.AspNetCompiler.PhysicalPath = "Merchello.Web.UI.Client\"
-		Release.AspNetCompiler.TargetPath = "PrecompiledWeb\localhost_55729\"
+		Release.AspNetCompiler.TargetPath = "PrecompiledWeb\localhost_64756\"
 		Release.AspNetCompiler.Updateable = "true"
 		Release.AspNetCompiler.ForceOverwrite = "true"
 		Release.AspNetCompiler.FixedNames = "false"
