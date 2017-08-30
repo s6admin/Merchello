@@ -50,6 +50,14 @@
         }
 
         /// <summary>
+        /// Gets the store root xpath.
+        /// </summary>
+        public string StoreRootXpath
+        {
+            get { return Section.Settings["StoreRootXpath"].Value; }
+        }
+
+        /// <summary>
         /// Get the Store document type alias
         /// </summary>
         public string ContentTypeAliasStore
@@ -95,6 +103,14 @@
         public string ContentTypeAliasAccount
         {
             get { return Section.Settings["ContentTypeAliasAccount"].Value; }
+        }
+
+        /// <summary>
+        /// Gets the content type alias change password.
+        /// </summary>
+        public string ContentTypeAliasChangePassword
+        {
+            get { return Section.Settings["ContentTypeAliasChangePassword"].Value; }
         }
 
         /// <summary>

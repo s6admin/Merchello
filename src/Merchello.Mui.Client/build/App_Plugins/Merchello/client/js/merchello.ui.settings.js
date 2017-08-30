@@ -1,6 +1,6 @@
 /*! MUI
  * https://merchello.com
- * Copyright (c) 2016 Across the Pond, LLC.
+ * Copyright (c) 2017 Across the Pond, LLC.
  * Licensed 
  */
 
@@ -39,7 +39,6 @@ if (MUI !== undefined) {
             // the braintree surface controller
             braintreePayPalSurface:   '/umbraco/fasttrack/BraintreePayPal/',
             braintreeStandardCcSurface: '/umbraco/fasttrack/BraintreeStandardCc/',
-
 
             // the checkout address surface controller end point
             countryRegionApi: '/umbraco/Merchello/CountryRegionApi/'

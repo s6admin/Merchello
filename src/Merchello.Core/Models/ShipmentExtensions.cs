@@ -86,6 +86,7 @@ namespace Merchello.Core.Models
                 CountryCode = shipment.ToCountryCode,
                 IsCommercial = shipment.ToIsCommercial,
                 Email = shipment.Email,
+                Phone = shipment.Phone,
                 Organization = shipment.ToOrganization,
                 AddressType = AddressType.Shipping,
 				Phone = shipment.Phone // S6 Original GetDestinationAddress does not transfer the Phone property so it always becomes a NULL value in the database

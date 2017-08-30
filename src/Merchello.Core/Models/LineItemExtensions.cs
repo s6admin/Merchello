@@ -316,6 +316,25 @@
         }
 
         /// <summary>
+        /// Converts a line item of one type to a line item of another type while preserving the key.
+        /// </summary>
+        /// <param name="lineItem">
+        /// The line item.
+        /// </param>
+        /// <typeparam name="T">
+        /// The type of the line item
+        /// </typeparam>
+        /// <returns>
+        /// The <see cref="T"/>.
+        /// </returns>
+        public static T AsLineItemWithKeyOf<T>(this ILineItem lineItem) where T : class, ILineItem
+        {
+            var clone = lineItem.AsLineItemOf<T>();
+            clone.Key = lineItem.Key;
+            return clone;
+        }
+
+        /// <summary>
         /// Returns a value indicating whether collection contains shippable items.
         /// </summary>
         /// <param name="container">
@@ -421,6 +440,7 @@
             return result;
         }
 
+
         #region Formatter
 
         /// <summary>
@@ -432,6 +452,7 @@
         /// <returns>
         /// The iteration identifier
         /// </returns>
+        [Obsolete]
         internal static string GetFormatterIterationIdentifier(this ILineItemContainer container)
         {
             if (container is IInvoice) return "Invoice.Items";
@@ -454,6 +475,7 @@
         /// <returns>
         /// A collection of replaceable patterns
         /// </returns>
+        [Obsolete]
         internal static IEnumerable<IReplaceablePattern> LineItemReplaceablePatterns(this ILineItemContainer container, string currencySymbol)
         {
             var patterns = new List<IReplaceablePattern>();

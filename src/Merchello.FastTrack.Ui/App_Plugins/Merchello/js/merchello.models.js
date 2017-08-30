@@ -1,6 +1,6 @@
 /*! Merchello
  * https://github.com/meritage/Merchello
- * Copyright (c) 2016 Across the Pond, LLC.
+ * Copyright (c) 2017 Across the Pond, LLC.
  * Licensed MIT
  */
 
@@ -559,16 +559,16 @@ var EntityCollectionDisplay = function() {
 EntityCollectionDisplay.prototype = (function() {
 
     function clone() {
-        var clone = angular.extend(new EntityCollectionDisplay(), this);
-        if (clone.filters) {
-            var collections = clone.filters;
-            clone.filters = [];
+        var c = angular.extend(new EntityCollectionDisplay(), this);
+        if (c.filters) {
+            var collections = c.filters;
+            c.filters = [];
             angular.forEach(collections, function(ac) {
                 var atclone = angular.extend(new EntityCollectionDisplay(), ac);
-                clone.filters.push(atclone);
+                c.filters.push(atclone);
             });
         }
-        return clone;
+        return c;
     }
 
     return {
@@ -597,7 +597,8 @@ var EntityCollectionProviderDisplay = function() {
     self.managesUniqueCollection = true;
     self.entityType = '';
     self.managedCollections = [];
-    self.dialogEditorView = undefined
+    // self.dialogEditorView = undefined;  we use this model for both collections and filters
+    //                                     this is just to indicate that the property is there in some models
 };
 
 
@@ -1097,7 +1098,9 @@ angular.module('merchello.models').constant('AddEditEntityStaticCollectionDialog
         self.productVariants = [];
         self.currencySymbol = '';
         self.price = 0;
+        self.costOfGoods = 0;
         self.includeSalePrice = false;
+        self.includeCostOfGoods = false;
         self.salePrice = 0;
     };
 
@@ -1833,13 +1836,16 @@ angular.module('merchello.models').constant('OfferProviderDisplay', OfferProvide
 
         // gets the local start date string
         function offerStartsDateLocalDateString() {
+            //return this.offerStartsDate;
             return localDateString(this.offerStartsDate);
         }
 
         // gets the local end date string
         function offerEndsDateLocalDateString() {
+            //return this.offerEndsDate;
             return localDateString(this.offerEndsDate);
         }
+
 
         function componentDefinitionExtendedDataToArray() {
             angular.forEach(this.componentDefinitions, function(cd) {
@@ -2320,7 +2326,7 @@ angular.module('merchello.models').constant('OfferProviderDisplay', OfferProvide
         self.name = '';
         self.sku = '';
         self.sortOrder = 0;
-        self.detachedDataValues = {};
+        self.detachedDataValues = [];
         self.isDefaultChoice = false;
     };
 
@@ -2859,7 +2865,9 @@ angular.module('merchello.models').constant('ProductVariantDetachedContentDispla
             });
 
             angular.forEach(this.attributes, function(a) {
-                a.detachedDataValues = a.detachedDataValues.toArray();
+                if(!angular.isArray(a.detachedDataValues)) {
+                 a.detachedDataValues = a.detachedDataValues.toArray();
+                }
             });
         }
 
@@ -3358,6 +3366,34 @@ angular.module('merchello.models').constant('SalesOverTimeResult', SalesOverTime
     }());
 
     angular.module('merchello.models').constant('InvoiceDisplay', InvoiceDisplay);
+/**
+ * @ngdoc model
+ * @name InvoiceItemItemizationDisplay
+ * @function
+ *
+ * @description
+ * Represents a JS version of Merchello's InvoiceItemItemizationDisplay object
+ */
+var InvoiceItemItemizationDisplay = function() {
+    var self = this;
+    self.adjustments = [];
+    self.custom = [];
+    self.discounts = [];
+    self.products = [];
+    self.shipping = [];
+    self.tax = [];
+    self.reconciles = false;
+    self.productTotal = 0.00;
+    self.shippingTotal = 0.00;
+    self.taxTotal = 0.00;
+    self.adjustmentTotal = 0.00;
+    self.discountTotal = 0.00;
+    self.customTotal = 0.00;
+    self.invoiceTotal = 0.00;
+    self.itemizationTotal = 0.00;
+};
+
+angular.module('merchello.models').constant('InvoiceItemItemizationDisplay', InvoiceItemItemizationDisplay);
     /**
      * @ngdoc model
      * @name InvoiceStatusDisplay
@@ -3698,6 +3734,7 @@ angular.module('merchello.models').constant('SalesOverTimeResult', SalesOverTime
         self.email = '';
         self.carrier = '';
         self.trackingCode = '';
+        self.trackingUrl = '';
         self.shippedDate = '';
         self.items = [];
         self.shipmentStatus = {};
@@ -4345,14 +4382,14 @@ angular.module('merchello.models').factory('entityCollectionDisplayBuilder',
                     var collections = [];
                     if (angular.isArray(jsonResult)) {
                         for(var i = 0; i < jsonResult.length; i++) {
-                            var filters = undefined;
+                            var filters = null;
                             if (jsonResult[i].filters) {
                                 filters = this.transform(jsonResult[i].filters);
                             }
                             var collection = genericModelBuilder.transform(jsonResult[ i ], Constructor);
                             collection.entityTypeField = typeFieldDisplayBuilder.transform(jsonResult[ i ].entityTypeField );
                             collection.extendedData = extendedDataDisplayBuilder.transform(jsonResult[i].extendedData);
-                            if (filters) {
+                            if (filters !== null) {
                                 collection.filters = filters;
                             }
                             collections.push(collection);
@@ -5251,6 +5288,8 @@ angular.module('merchello.models').factory('merchelloTabsFactory',
                 tabs.addTab('salesOverTime', 'merchelloTabs_salesOverTime', '#/merchello/merchello/salesOverTime/manage');
                 tabs.addTab("salesByItem", "merchelloTabs_salesByItem", '#/merchello/merchello/salesByItem/manage');
                 tabs.addTab("abandonedBasket", "merchelloTabs_abandonedBasket", '#/merchello/merchello/abandonedBasket/manage');
+                // throw event here:
+
                 return tabs;
             }
 
@@ -6068,6 +6107,49 @@ angular.module('merchello.models').factory('salesOverTimeResultBuilder',
                     }
                 };
             }]);
+    /**
+     * @ngdoc service
+     * @name merchello.models.invoiceItemItemizationDisplayBuilder
+     *
+     * @description
+     * A utility service that builds InvoiceItemItemizationDisplay models
+     */
+    angular.module('merchello.models')
+        .factory('invoiceItemItemizationDisplayBuilder',
+            ['genericModelBuilder','invoiceLineItemDisplayBuilder', 'InvoiceItemItemizationDisplay',
+            function (genericModelBuilder, invoiceLineItemDisplayBuilder, InvoiceItemItemizationDisplay) {
+
+                var Constructor = InvoiceItemItemizationDisplay;
+
+                return {
+                    createDefault: function() {
+                        return new Constructor();
+                    },
+                    transform: function(jsonResult) {
+                        var itemizations = genericModelBuilder.transform(jsonResult, Constructor);
+                        if (angular.isArray(itemizations)) {
+                            for(var i = 0; i < itemizations.length; i++) {
+                                itemizations[ i ].adjustments = invoiceLineItemDisplayBuilder.transform(jsonResult[ i ].adjustments);
+                                itemizations[ i ].custom = invoiceLineItemDisplayBuilder.transform(jsonResult[ i ].custom);
+                                itemizations[ i ].discounts = invoiceLineItemDisplayBuilder.transform(jsonResult[ i ].discounts);
+                                itemizations[ i ].products = invoiceLineItemDisplayBuilder.transform(jsonResult[ i ].products);
+                                itemizations[ i ].shipping = invoiceLineItemDisplayBuilder.transform(jsonResult[ i ].shipping);
+                                itemizations[ i ].tax = invoiceLineItemDisplayBuilder.transform(jsonResult[ i ].tax);
+                            }
+                        } else {
+                            //jsonResult = JSON.stringify(jsonResult);
+                            itemizations.adjustments = invoiceLineItemDisplayBuilder.transform(jsonResult.adjustments);
+                            itemizations.custom = invoiceLineItemDisplayBuilder.transform(jsonResult.custom);
+                            itemizations.discounts = invoiceLineItemDisplayBuilder.transform(jsonResult.discounts);
+                            itemizations.products = invoiceLineItemDisplayBuilder.transform(jsonResult.products);
+                            itemizations.shipping = invoiceLineItemDisplayBuilder.transform(jsonResult.shipping);
+                            itemizations.tax = invoiceLineItemDisplayBuilder.transform(jsonResult.tax);
+                        }
+                        return itemizations;
+                    }
+                };
+        }]);
+
     /**
      * @ngdoc service
      * @name merchello.models.invoiceLineItemDisplayBuilder

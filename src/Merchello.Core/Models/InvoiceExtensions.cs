@@ -13,10 +13,12 @@
     using Gateways.Payment;
     using Gateways.Taxation;
 
+    using Merchello.Core.Configuration;
     using Merchello.Core.EntityCollections;
     using Merchello.Core.Logging;
     using Merchello.Core.Models.Interfaces;
     using Merchello.Core.Models.TypeFields;
+    using Merchello.Core.Strategies.Itemization;
 
     using Newtonsoft.Json;
     using Services;
@@ -91,6 +93,42 @@
                        ? merchelloContext.Services.StoreSettingService.GetCurrencyByCode(currencyCode)
                        : null;
         }
+
+        #region Itemization
+
+        /// <summary>
+        /// Itemizes the items in an invoice.
+        /// </summary>
+        /// <param name="invoice">
+        /// The invoice.
+        /// </param>
+        /// <returns>
+        /// The <see cref="InvoiceItemItemization"/>.
+        /// </returns>
+        /// <exception cref="Exception">
+        /// Throws an exception if the itemization strategy could not be instantiated.
+        /// </exception>
+        public static InvoiceItemItemization ItemizeItems(this IInvoice invoice)
+        {
+            var type = MerchelloConfiguration.Current.GetStrategyElement(Constants.StrategyTypeAlias.InvoiceItemizationStrategy).Type;
+
+            var ctrArgValues = new object[] { invoice };
+
+            var strategy = ActivatorHelper.CreateInstance<InvoiceItemizationStrategyBase>(type, ctrArgValues);
+
+
+            if (strategy.Success)
+            {
+                return strategy.Result.Itemize();
+            }
+
+
+            MultiLogHelper.Error(typeof(InvoiceExtensions), "Failed to instantiate the InvoiceItemizationStrategy.", strategy.Exception);
+
+            throw strategy.Exception;
+        }
+
+        #endregion
 
         #region Address
 
@@ -169,6 +207,7 @@
         /// <returns>
         /// The collection of replaceable patterns
         /// </returns>
+        [Obsolete]
         internal static IEnumerable<IReplaceablePattern> ReplaceablePatterns(this IInvoice invoice, string currencySymbol)
         {
             
@@ -387,8 +426,13 @@
             var attempt = orderBuilder.Build();
             if (attempt.Success) return attempt.Result;
 
-            MultiLogHelper.Error<OrderBuilderChain>("Extension method PrepareOrder failed", attempt.Exception);
-            throw attempt.Exception;
+            var exception = attempt.Exception != null
+                                ? attempt.Exception
+                                : new NullReferenceException(
+                                      "Order creation task did not return an exception but it returned as a failure.");
+
+                MultiLogHelper.Error<OrderBuilderChain>("Extension method PrepareOrder failed", attempt.Exception);
+                throw exception;
         }
 
         #endregion
@@ -850,7 +894,7 @@
         /// </returns>
         public static decimal TotalItemPrice(this IInvoice invoice)
         {                                                                 
-            return invoice.Items.Where(x => x.LineItemType == LineItemType.Product).Sum(x => x.TotalPrice);
+            return Ensure2Places(invoice.Items.Where(x => x.LineItemType == LineItemType.Product).Sum(x => x.TotalPrice));
         }
 
         /// <summary>
@@ -864,7 +908,7 @@
         /// </returns>
         public static decimal TotalCustomItemPrice(this IInvoice invoice)
         {
-            return invoice.Items.Where(x => x.LineItemType == LineItemType.Custom).Sum(x => x.TotalPrice);
+            return Ensure2Places(invoice.Items.Where(x => x.LineItemType == LineItemType.Custom).Sum(x => x.TotalPrice));
         }
 
         /// <summary>
@@ -878,7 +922,7 @@
         /// </returns>
         public static decimal TotalAdjustmentItemPrice(this IInvoice invoice)
         {
-            return invoice.Items.Where(x => x.LineItemType == LineItemType.Adjustment).Sum(x => x.TotalPrice);
+            return Ensure2Places(invoice.Items.Where(x => x.LineItemType == LineItemType.Adjustment).Sum(x => x.TotalPrice));
         }
 
         /// <summary>
@@ -892,7 +936,7 @@
         /// </returns>
         public static decimal TotalShipping(this IInvoice invoice)
         {
-            return invoice.Items.Where(x => x.LineItemType == LineItemType.Shipping).Sum(x => x.TotalPrice);
+            return Ensure2Places(invoice.Items.Where(x => x.LineItemType == LineItemType.Shipping).Sum(x => x.TotalPrice));
         }
 
         /// <summary>
@@ -906,7 +950,7 @@
         /// </returns>
         public static decimal TotalTax(this IInvoice invoice)
         {
-            return invoice.Items.Where(x => x.LineItemType == LineItemType.Tax).Sum(x => x.TotalPrice);
+            return Ensure2Places(invoice.Items.Where(x => x.LineItemType == LineItemType.Tax).Sum(x => x.TotalPrice));
         }
 
         /// <summary>
@@ -920,7 +964,7 @@
         /// </returns>
         public static decimal TotalDiscounts(this IInvoice invoice)
         {
-            return invoice.Items.Where(x => x.LineItemType == LineItemType.Discount).Sum(x => x.TotalPrice);
+            return Ensure2Places(invoice.Items.Where(x => x.LineItemType == LineItemType.Discount).Sum(x => x.TotalPrice));
         }
         
         #endregion
@@ -1111,5 +1155,12 @@
         }
 
         #endregion
+
+        internal static decimal Ensure2Places(decimal value)
+        {
+            var ensured = value.ToString("N2");
+
+            return decimal.Parse(ensured);
+        }
     }
 }

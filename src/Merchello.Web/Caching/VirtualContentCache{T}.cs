@@ -5,6 +5,7 @@
     using System.Linq;
     using System.Text;
 
+    using Merchello.Core;
     using Merchello.Core.Logging;
     using Merchello.Core.Models;
     using Merchello.Core.Models.EntityBase;
@@ -61,9 +62,9 @@
         }
 
         /// <summary>
-        /// Gets a value indicating whether modified version.
+        /// Gets or sets a value indicating whether modified version.
         /// </summary>
-        protected bool ModifiedVersion { get; private set; }
+        internal bool ModifiedVersion { get; set; }
 
         /// <summary>
         /// Gets the <see cref="IRuntimeCacheProvider"/>.
@@ -191,7 +192,7 @@
         /// <param name="key">
         /// The key.
         /// </param>
-        public void ClearVirtualCache(Guid key)
+        public virtual void ClearVirtualCache(Guid key)
         {
             _cache.RuntimeCache.ClearCacheItem(GetCacheKey(key, true));
             _cache.RuntimeCache.ClearCacheItem(GetCacheKey(key, false));

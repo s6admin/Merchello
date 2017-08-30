@@ -1,6 +1,7 @@
 ﻿namespace Merchello.Core.Gateways.Notification.Smtp
 {
     using System;
+    using System.Collections.Generic;
     using System.Linq;
     using System.Net;
     using System.Net.Mail;
@@ -16,6 +17,7 @@
 
     using Umbraco.Core;
     using Umbraco.Core.Events;
+    using Umbraco.Core.Logging;
 
     /// <summary>
     /// Represents a SmtpNotificationGatewayMethod
@@ -56,33 +58,47 @@
         /// <summary>
         /// Does the actual work of sending the <see cref="IFormattedNotificationMessage"/>
         /// </summary>
-        /// <param name="message">The <see cref="IFormattedNotificationMessage"/> to be sent</param>
-        public override void PerformSend(IFormattedNotificationMessage message)
+        /// <param name="message">
+        /// The <see cref="IFormattedNotificationMessage"/> to be sent
+        /// </param>
+        /// <param name="attachments">
+        /// The attachments.
+        /// </param>
+        public override void PerformSend(IFormattedNotificationMessage message, IEnumerable<Attachment> attachments = null)
         {
             if (!message.Recipients.Any()) return;
 
-            var msg = new MailMessage
+            using (var msg = new MailMessage
             {
                 From = new MailAddress(message.From),
                 Subject = message.Name,
                 Body = message.BodyText,
                 IsBodyHtml = true
-            };
-
-            MultiLogHelper.Info<SmtpNotificationGatewayMethod>("Sending an email to " + string.Join(", ", message.Recipients));
-
-            foreach (var to in message.Recipients)
+            })
             {
-                if (!string.IsNullOrEmpty(to))
+                LogHelper.Info<SmtpNotificationGatewayMethod>("Sending an email to " + string.Join(", ", message.Recipients));
+
+                foreach (var to in message.Recipients)
                 {
-                    msg.To.Add(new MailAddress(to));
+                    if (!string.IsNullOrEmpty(to))
+                    {
+                        msg.To.Add(new MailAddress(to));
+                    }
                 }
+
+                if (attachments != null)
+                {
+                    foreach (var att in attachments)
+                    {
+                        msg.Attachments.Add(att);
+                    }
+                }
+
+                // Event raised to allow further modification to msg (like attachments)
+                Sending.RaiseEvent(new ObjectEventArgs<MailMessage>(msg), this);
+
+                this.Send(msg);
             }
-
-            // Event raised to allow further modification to msg (like attachments)
-            Sending.RaiseEvent(new ObjectEventArgs<MailMessage>(msg), this);
-
-            this.Send(msg);
         }
 
         /// <summary>
@@ -114,7 +130,8 @@
             }
             catch (Exception ex)
             {
-                MultiLogHelper.Error<SmtpNotificationGatewayMethod>("Merchello.Core.Gateways.Notification.Smtp.SmtpNotificationGatewayMethod  failed sending email", ex);
+                // REFACTOR update to MultiLogHelper when we control resolution
+                LogHelper.Error<SmtpNotificationGatewayMethod>("Merchello.Core.Gateways.Notification.Smtp.SmtpNotificationGatewayMethod  failed sending email", ex);
                 return false;
             }
         }

@@ -21,6 +21,8 @@
     using Merchello.Core.Persistence.Migrations;
     using Merchello.Core.Persistence.Migrations.Initial;
     using Merchello.Web.Routing;
+    using Merchello.Web.Search;
+    using Merchello.Web.Search.Provisional;
     using Merchello.Web.Workflow;
 
     using Models.SaleHistory;
@@ -109,6 +111,8 @@
         {
             base.ApplicationStarted(umbracoApplication, applicationContext);
 
+            Core.CoreBootManager.FinalizeBoot();
+
             MultiLogHelper.Info<UmbracoApplicationEventHandler>("Initializing Customer related events");
 
             MemberService.Saving += this.MemberServiceOnSaving;
@@ -136,7 +140,44 @@
             // Detached Content
             DetachedContentTypeService.Deleting += DetachedContentTypeServiceOnDeleting;
 
+            ProductService.AddedToCollection += ProductServiceAddedToCollection;
+            ProductService.RemovedFromCollection += ProductServiceRemovedFromCollection;
+            ProductService.Deleted += ProductServiceDeleted;
+
+            EntityCollectionService.Saved += EntityCollectionSaved;
+            EntityCollectionService.Deleted += EntityCollectionDeleted;
+
             if (merchelloIsStarted) this.VerifyMerchelloVersion();
+        }
+
+        private void EntityCollectionSaved(IEntityCollectionService sender, SaveEventArgs<Core.Models.Interfaces.IEntityCollection> e)
+        {
+            var merchello = new MerchelloHelper();
+            ((ProductFilterGroupQuery)merchello.Filters.Product).ClearFilterTreeCache();
+        }
+
+        private void EntityCollectionDeleted(IEntityCollectionService sender, DeleteEventArgs<Core.Models.Interfaces.IEntityCollection> e)
+        {
+            var merchello = new MerchelloHelper();
+            ((ProductFilterGroupQuery)merchello.Filters.Product).ClearFilterTreeCache();
+        }
+
+        private void ProductServiceDeleted(IProductService sender, DeleteEventArgs<IProduct> e)
+        {
+            var merchello = new MerchelloHelper();
+            ((ProductFilterGroupQuery)merchello.Filters.Product).ClearFilterTreeCache();
+        }   
+
+        private void ProductServiceRemovedFromCollection(object sender, EventArgs e)
+        {
+            var merchello = new MerchelloHelper();
+            ((ProductFilterGroupQuery)merchello.Filters.Product).ClearFilterTreeCache();
+        }
+
+        private void ProductServiceAddedToCollection(object sender, EventArgs e)
+        {
+            var merchello = new MerchelloHelper();
+            ((ProductFilterGroupQuery)merchello.Filters.Product).ClearFilterTreeCache();
         }
 
         /// <summary>

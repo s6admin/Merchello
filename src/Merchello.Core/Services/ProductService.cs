@@ -23,7 +23,7 @@
     /// <summary>
     /// Represents the Product Service 
     /// </summary>
-    public class ProductService : PageCachedServiceBase<IProduct>, IProductService
+    public partial class ProductService : PageCachedServiceBase<IProduct>, IProductService
     {
         /// <summary>
         /// The locker.
@@ -169,6 +169,14 @@
         /// Occurs after Delete
         /// </summary>
         public static event TypedEventHandler<IProductService, DeleteEventArgs<IProduct>> Deleted;
+
+        internal static event EventHandler AddingToCollection;
+
+        internal static event EventHandler RemovingFromCollection;
+
+        internal static event EventHandler AddedToCollection;
+
+        internal static event EventHandler RemovedFromCollection;
 
         #endregion
 
@@ -625,10 +633,14 @@
         /// </param>
         public void AddToCollection(Guid productKey, Guid collectionKey)
         {
+            if (AddingToCollection != null) AddingToCollection.Invoke(this, new EventArgs());
+           
             using (var repository = RepositoryFactory.CreateProductRepository(UowProvider.GetUnitOfWork()))
             {
                 repository.AddToCollection(productKey, collectionKey);
             }
+
+            if (AddedToCollection != null) AddedToCollection.Invoke(this, new EventArgs());
         }
 
         /// <summary>
@@ -710,10 +722,15 @@
         /// </param>
         public void RemoveFromCollection(Guid productKey, Guid collectionKey)
         {
+            if (RemovingFromCollection != null) RemovingFromCollection.Invoke(this, new EventArgs());
+
             using (var repository = RepositoryFactory.CreateProductRepository(UowProvider.GetUnitOfWork()))
             {
                 repository.RemoveFromCollection(productKey, collectionKey);
             }
+
+            if (RemovedFromCollection != null) RemovedFromCollection.Invoke(this, new EventArgs());
+
         }
 
         /// <summary>
@@ -872,6 +889,22 @@
             {
                 return repository.GetAll();
             }
+        }
+
+        //// Hack fix for ATP
+        //// This should not be public
+        //// REFACTOR
+        public Page<Guid> GetKeysThatExistInAnyCollections(
+           IEnumerable<Guid> collectionKeys,
+           long page,
+           long itemsPerPage,
+           string sortBy = "",
+           SortDirection sortDirection = SortDirection.Descending)
+                {
+                    using (var repository = RepositoryFactory.CreateProductRepository(UowProvider.GetUnitOfWork()))
+                    {
+                        return repository.GetKeysThatExistInAnyCollections(collectionKeys.ToArray(), page, itemsPerPage, this.ValidateSortByField(sortBy), sortDirection);
+                    }
         }
 
         /// <summary>
@@ -1162,18 +1195,6 @@
             }
         }
 
-        internal Page<Guid> GetKeysThatExistInAnyCollections(
-           IEnumerable<Guid> collectionKeys,
-           long page,
-           long itemsPerPage,
-           string sortBy = "",
-           SortDirection sortDirection = SortDirection.Descending)
-        {
-            using (var repository = RepositoryFactory.CreateProductRepository(UowProvider.GetUnitOfWork()))
-            {
-                return repository.GetKeysThatExistInAnyCollections(collectionKeys.ToArray(), page, itemsPerPage, this.ValidateSortByField(sortBy), sortDirection);
-            }
-        }
 
         internal Page<Guid> GetKeysThatExistInAnyCollections(
            IEnumerable<Guid> collectionKeys,
@@ -1748,6 +1769,14 @@
             using (var repository = RepositoryFactory.CreateProductVariantRepository(UowProvider.GetUnitOfWork()))
             {
                 return repository.Count(query);
+            }
+        }
+
+        internal IEnumerable<Tuple<IEnumerable<Guid>, int>> CountKeysThatExistInAllCollections(IEnumerable<Guid[]> collectionKeysGroups)
+        {
+            using (var repository = RepositoryFactory.CreateProductRepository(UowProvider.GetUnitOfWork()))
+            {
+                return repository.CountKeysThatExistInAllCollections(collectionKeysGroups);
             }
         }
 

@@ -164,7 +164,8 @@
                 var province = gwshipmethod.ShipMethod.Provinces.FirstOrDefault(x => x.Code == shipment.ToRegion);
                 if (province == null)
                 {
-                    MultiLogHelper.Debug<ShippingGatewayProviderBase>("Province code '" + shipment.ToRegion + "' was not found in ShipCountry with code : " + shipCountry.CountryCode);
+                    // TODO REFACTOR TO MultiLogHelper when we control Resolution.Freeze
+                    LogHelper.Debug<ShippingGatewayProviderBase>("Province code '" + shipment.ToRegion + "' was not found in ShipCountry with code : " + shipCountry.CountryCode);
                     available.Add(gwshipmethod);
                 }
                 else
@@ -246,6 +247,15 @@
             return strategy.GetShipmentRateQuotes(tryGetCached);
         }
 
+
+        /// <summary>
+        /// The reset ship methods.
+        /// </summary>
+        public virtual void ResetShipMethods()
+        {
+            _shipMethods = null;
+        }
+
         /// <summary>
         /// Deletes all active shipMethods
         /// </summary>
@@ -261,14 +271,6 @@
             {
                 DeleteShippingGatewayMethod(gatewayShipMethod);
             }
-        }
-
-        /// <summary>
-        /// The reset ship methods.
-        /// </summary>
-        internal virtual void ResetShipMethods()
-        {
-            _shipMethods = null;
         }
     }
 }

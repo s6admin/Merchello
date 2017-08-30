@@ -1,14 +1,11 @@
 ﻿namespace Merchello.Web.Models
 {
-    using System;
-    using System.Runtime.Serialization;
-
     using Merchello.Core.Models;
 
     /// <summary>
     /// Defines an entity collection proxy.
     /// </summary>
-    public interface IEntityCollectionProxy : IHasParent, IEntityProxy
+    public interface IEntityCollectionProxy : IHasParent, IEntityProxy, IHasExtendedData
     {
         /// <summary>
         /// Gets the collection name.

@@ -1,7 +1,10 @@
 ﻿namespace Merchello.Core
 {
     using System;
+    using System.Collections.Generic;
     using System.Globalization;
+    using System.Text;
+    using System.Web.Security;
 
     /// <summary>
     /// The string extensions.
@@ -150,6 +153,16 @@
         public static string IfNullOrWhiteSpace(this string str, string defaultValue)
         {
             return str.IsNullOrWhiteSpace() ? defaultValue : str;
+        }
+
+
+        internal static string ReplaceNonAlphanumericChars(this string input, char replacement)
+        {
+            var inputArray = input.ToCharArray();
+            var outputArray = new char[input.Length];
+            for (var i = 0; i < inputArray.Length; i++)
+                outputArray[i] = char.IsLetterOrDigit(inputArray[i]) ? inputArray[i] : replacement;
+            return new string(outputArray);
         }
     }
 }

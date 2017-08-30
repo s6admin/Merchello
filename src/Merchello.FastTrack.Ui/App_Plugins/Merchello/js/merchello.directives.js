@@ -1,6 +1,6 @@
 /*! Merchello
  * https://github.com/meritage/Merchello
- * Copyright (c) 2016 Across the Pond, LLC.
+ * Copyright (c) 2017 Across the Pond, LLC.
  * Licensed MIT
  */
 
@@ -39,7 +39,7 @@ angular.module('merchello.directives').directive('offerComponents', function() {
  * @description
  * Common form elements for Merchello's OfferSettings
  */
-angular.module('merchello.directives').directive('offerMainProperties', function() {
+angular.module('merchello.directives').directive('offerMainProperties', function(dialogService, localizationService, eventsService) {
 
     return {
         restrict: 'E',
@@ -50,7 +50,58 @@ angular.module('merchello.directives').directive('offerMainProperties', function
             settings: '=',
             toggleOfferExpires: '&'
         },
-        templateUrl: '/App_Plugins/Merchello/Backoffice/Merchello/Directives/offer.mainproperties.tpl.html'
+        templateUrl: '/App_Plugins/Merchello/Backoffice/Merchello/Directives/offer.mainproperties.tpl.html',
+        link: function (scope, elm, attr) {
+
+            scope.dateBtnText = '';
+            scope.ready = false;
+            var allDates = '';
+            var eventOfferExpiresOpen = 'merchello.offercouponexpires.open';
+
+            scope.openDateRangeDialog = function() {
+                var dialogData = {
+                    startDate: scope.offer.offerStartsDate,
+                    endDate: scope.offer.offerEndsDate
+                };
+
+                dialogService.open({
+                    template: '/App_Plugins/Merchello/Backoffice/Merchello/Dialogs/daterange.selection.html',
+                    show: true,
+                    callback: processDateRange,
+                    dialogData: dialogData
+                });
+            }
+
+            scope.clearDates = function() {
+                scope.toggleOfferExpires();
+            }
+
+            function init() {
+
+                eventsService.on(eventOfferExpiresOpen, scope.openDateRangeDialog);
+
+                scope.$watch('offer', function(nv, ov) {
+
+                    if (nv) {
+                        if (nv.key !== undefined) {
+                            localizationService.localize('merchelloGeneral_allDates').then(function(value) {
+                                allDates = value;
+                                scope.ready = true;
+                            });
+                        }
+                    }
+
+                });
+
+            }
+
+            function processDateRange(dialogData) {
+                scope.offer.offerStartsDate = dialogData.startDate;
+                scope.offer.offerEndsDate = dialogData.endDate;
+            }
+
+            init();
+        }
     };
 })
 
@@ -311,12 +362,14 @@ angular.module('merchello.directives').directive('entityFilterGroupList', [
                                 entityType: scope.entityType
                             };
 
+                            // TODO SWAP TEMPLATE
                             var template = provider.dialogEditorView.editorView !== '' ?
-                                provider.dialogEditorView.editorView : '/App_Plugins/Merchello/Backoffice/Merchello/Dialogs/filtergroupfilters.addedit.html';
+                                provider.dialogEditorView.editorView :
+                                '/App_Plugins/Merchello/Backoffice/Merchello/Dialogs/filtergroupfilters.addedit.html';
 
 
                             dialogService.open({
-                                template: '/App_Plugins/Merchello/Backoffice/Merchello/Dialogs/filtergroupfilters.addedit.html',
+                                template: template,
                                 show: true,
                                 callback: processEditCollection,
                                 dialogData: dialogData
@@ -1823,7 +1876,7 @@ angular.module('merchello.directives').directive('merchelloSaveIcon', function(l
         replace: true,
         scope: {
             showSave: '=',
-            doSave: '&',
+            doSave: '&'
         },
         template: '<span class="merchello-icons">' +
         '<a class="merchello-icon merchello-icon-provinces" data-ng-show="showSave" ng-click="doSave()" title="{{title}}" prevent-default>' +
@@ -1993,8 +2046,8 @@ angular.module('merchello.directives').directive('merchelloCreateButton', functi
 
 
 angular.module('merchello.directives').directive('merchelloListView',
-    ['$routeParams', '$log', '$filter', 'dialogService', 'localizationService', 'merchelloListViewHelper', 'queryDisplayBuilder', 'queryResultDisplayBuilder',
-    function($routeParams, $log, $filter, dialogService, localizationService, merchelloListViewHelper, queryDisplayBuilder, queryResultDisplayBuilder) {
+    ['$routeParams', '$log', '$filter', 'dialogService', 'eventsService', 'localizationService', 'merchelloListViewHelper', 'queryDisplayBuilder', 'queryResultDisplayBuilder',
+    function($routeParams, $log, $filter, dialogService, eventsService, localizationService, merchelloListViewHelper, queryDisplayBuilder, queryResultDisplayBuilder) {
         return {
             restrict: 'E',
             replace: true,
@@ -2035,6 +2088,8 @@ angular.module('merchello.directives').directive('merchelloListView',
                 scope.endDate = '';
                 scope.dateBtnText = ''
                 var allDates = '';
+
+                var handleChanged = "merchello.collection.changed";
 
                 scope.config = merchelloListViewHelper.getConfig(scope.entityType);
 
@@ -2083,6 +2138,8 @@ angular.module('merchello.directives').directive('merchelloListView',
                               search();
                           }
                     });
+
+                    eventsService.on(handleChanged, search);
 
                 }
 
@@ -2746,9 +2803,6 @@ angular.module('merchello.directives').directive("productOptionsAddEdit",
                     });
                 }
             });
-
-
-
 
             if (scope.option.choices.length > 0) {
                 scope.selectedAttribute.current = _.find(scope.option.choices, function(c) {
@@ -3764,18 +3818,29 @@ angular.module('merchello.directives').directive('productVariantsViewTable', fun
                     settings: '='
                 },
                 templateUrl: '/App_Plugins/Merchello/Backoffice/Merchello/Directives/productvariant.mainproperties.tpl.html',
-                controller: function ($scope, warehouseResource, warehouseDisplayBuilder, catalogInventoryDisplayBuilder) {
+                controller: function ($scope, productResource, warehouseResource, warehouseDisplayBuilder, catalogInventoryDisplayBuilder) {
 
                     // Get the default warehouse for the ensureCatalogInventory() function below
                     $scope.defaultWarehouse = {};
                     $scope.defaultWarehouseCatalog = {};
 
+                    $scope.manufacturers = [];
+                    $scope.showSuggest = false;
+
+                    // grab the manufacturer text box to apply the filters
+                    var input = angular.element( document.querySelector( '#manufacturer' ) );
+
+                    $scope.populate = function(txt) {
+                        $scope.productVariant.manufacturer = txt;
+                    }
+
+
                     function init() {
-                       /* $scope.$watch('settings', function(nv, ov) {
-                            if (nv !== undefined) {
-                                console.info($scope.settings);
-                            }
-                        })*/
+
+                        // get the list of existing manufacturers to make it easier to enter
+                        productResource.getManufacturers().then(function(data) {
+                            $scope.manufacturers = data;
+                        });
 
                         var promiseWarehouse = warehouseResource.getDefaultWarehouse();
                         promiseWarehouse.then(function (warehouse) {
@@ -3790,6 +3855,27 @@ angular.module('merchello.directives').directive('productVariantsViewTable', fun
                                 {
                                     $scope.productVariant.ensureCatalogInventory($scope.defaultWarehouseCatalog.key);
                                 }
+                            }
+                        });
+
+                        input.bind("keyup focusout", function (event) {
+                            var code = event.which;
+                            // alpha , numbers, ! and backspace
+
+                            if ( code === 45 ||
+                                (code >47 && code <58) ||
+                                (code >64 && code <91) ||
+                                (code >96 && code <123) || code === 33 || code == 8) {
+                                $scope.$apply(function () {
+                                    if ($scope.productVariant.manufacturer !== '') {
+                                        $scope.showSuggest = true;
+                                    } else {
+                                        $scope.showSuggest = false;
+                                    }
+                                });
+                            } else {
+                                event.preventDefault();
+                                $scope.showSuggest = false;
                             }
                         });
                     }
@@ -4258,7 +4344,7 @@ angular.module('merchello.directives').directive('addPaymentTable', function() {
             paymentMethods: '=',
         },
         templateUrl: '/App_Plugins/Merchello/Backoffice/Merchello/directives/addpaymenttable.tpl.html',
-        controller: function($scope, $timeout, notificationsService, dialogService, dialogDataFactory, paymentResource) {
+        controller: function($scope, $timeout, invoiceHelper, notificationsService, dialogService, dialogDataFactory, paymentResource) {
             $scope.loaded = false;
             $scope.authorizePaymentOnly = false;
 
@@ -4321,7 +4407,7 @@ angular.module('merchello.directives').directive('addPaymentTable', function() {
                 dialogData.showSpinner = $scope.showSpinner;
                 dialogData.paymentMethod = paymentMethod;
                 dialogData.paymentMethodName = paymentMethod.name;
-                dialogData.invoiceBalance = $scope.invoice.remainingBalance($scope.payments);
+                dialogData.invoiceBalance = invoiceHelper.round($scope.invoice.remainingBalance($scope.payments), 2);
                 dialogData.currencySymbol = $scope.currencySymbol;
                 dialogData.invoice = $scope.invoice;
                 dialogData.authorizePaymentOnly = $scope.authorizePaymentOnly;
@@ -4355,10 +4441,11 @@ angular.module('merchello.directives').directive('addPaymentTable', function() {
                 }
                 promise.then(function (payment) {
                     // added a timeout here to give the examine index
-                    $timeout(function() {
+                   $timeout(function() {
                         notificationsService.success('Payment ' + note + 'success');
                         reload();
                     }, 400);
+
                 }, function (reason) {
                     notificationsService.error('Payment ' + note + 'Failed', reason.message);
                 });
@@ -4591,9 +4678,8 @@ angular.module('merchello.directives').directive('invoiceHeader',
 }])
 
 angular.module('merchello.directives').directive('invoiceItemizationTable',
-    ['localizationService', 'invoiceHelper',
-        function(localizationService, invoiceHelper) {
-
+    ['$q', 'localizationService', 'invoiceResource', 'invoiceHelper',
+        function($q, localizationService, invoiceResource, invoiceHelper) {
             return {
                 restrict: 'E',
                 replace: true,
@@ -4617,6 +4703,8 @@ angular.module('merchello.directives').directive('invoiceItemizationTable',
                     scope.discountLineItems = [];
                     scope.adjustmentLineItems = [];
                     scope.remainingBalance = 0;
+
+                    scope.itemization = {};
 
                     function init() {
 
@@ -4648,27 +4736,17 @@ angular.module('merchello.directives').directive('invoiceItemizationTable',
 
                         var label  = scope.remainingBalance == '0' ? 'merchelloOrderView_captured' : 'merchelloOrderView_authorized';
 
-                        localizationService.localize(label).then(function(value) {
-                            scope.authorizedCapturedLabel = value;
+                        $q.all([
+                            localizationService.localize(label),
+                            invoiceResource.getItemItemization(scope.invoice.key)
+                        ]).then(function(data) {
+                            scope.authorizedCapturedLabel = data[0];
+                            scope.itemization = data[1];
+                            scope.loaded = true;
                         });
 
-                        scope.loaded = true;
                     }
 
-
-                    // utility method to assist in building scope line item collections
-                    function aggregateScopeLineItemCollection(lineItems, collection) {
-                        if(angular.isArray(lineItems)) {
-                            angular.forEach(lineItems, function(item) {
-                                collection.push(item);
-                            });
-                        } else {
-                            if(lineItems !== undefined) {
-                                collection.push(lineItems);
-                            }
-                        }
-                    }
-                    
                     // initialize the directive
                     init();
                 }

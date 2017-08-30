@@ -13,7 +13,7 @@
     /// <summary>
     /// Marker interface for the address repository
     /// </summary>
-    public interface IProductRepository : IPagedRepository<IProduct, ProductDto>, IStaticEntityCollectionRepository<IProduct>
+    public interface IProductRepository : IPagedRepository<IProduct, ProductDto>, IStaticEntityCollectionRepository<IProduct>, IProductCollectionPriceQueries
     {
         /// <summary>
         /// Gets a collection of <see cref="IProduct"/> that has detached content of type.
@@ -360,6 +360,11 @@
         /// The <see cref="Page{Guid}"/>.
         /// </returns>
         Page<Guid> GetProductsKeysOnSale(long page, long itemsPerPage, string orderExpression, SortDirection sortDirection = SortDirection.Descending);
+
+
+        int CountKeysThatExistInAllCollections(Guid[] collectionKeys);
+
+        IEnumerable<Tuple<IEnumerable<Guid>, int>> CountKeysThatExistInAllCollections(IEnumerable<Guid[]> collectionKeysGroups);
 
         #endregion
     }

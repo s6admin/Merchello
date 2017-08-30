@@ -27,7 +27,7 @@
         /// <summary>
         /// The activated gateway provider cache.
         /// </summary>
-        private readonly ConcurrentDictionary<Guid, Type> _entityCollectionProviderCache = new ConcurrentDictionary<Guid, Type>();
+        private static readonly ConcurrentDictionary<Guid, Type> _entityCollectionProviderCache = new ConcurrentDictionary<Guid, Type>();
 
         /// <summary>
         /// The instance types.
@@ -311,6 +311,23 @@
         }
 
         /// <summary>
+        /// The ensure initialized.
+        /// </summary>
+        internal void EnsureInitialized()
+        {
+            var defined =
+                _instanceTypes
+                    .Select(x => x.GetCustomAttribute<EntityCollectionProviderAttribute>(false).Key).Distinct().Count();
+
+            var registered =
+                _entityCollectionProviderCache.Select(
+                    x => x.Value.GetCustomAttribute<EntityCollectionProviderAttribute>(false).Key).Distinct().Count();
+
+            if (defined < registered) IsInitialized = false;
+            if (!IsInitialized) this.Initialize();
+        }
+
+        /// <summary>
         /// Gets the provider attributes of providers with matching types
         /// </summary>
         /// <param name="type">
@@ -366,23 +383,6 @@
         }
 
         /// <summary>
-        /// The ensure initialized.
-        /// </summary>
-        private void EnsureInitialized()
-        {
-            var defined =
-                _instanceTypes
-                    .Select(x => x.GetCustomAttribute<EntityCollectionProviderAttribute>(false).Key).Distinct().Count();
-
-            var registered =
-                _entityCollectionProviderCache.Select(
-                    x => x.Value.GetCustomAttribute<EntityCollectionProviderAttribute>(false).Key).Distinct().Count();
-
-            if (defined < registered) IsInitialized = false;
-            if (!IsInitialized) this.Initialize();
-        }
-
-        /// <summary>
         /// Ensures the provider.
         /// </summary>
         /// <param name="providerKey">
@@ -434,11 +434,13 @@
 
                 if (EnusureUniqueProvider(att.Key))
                 {
-                    var collection = ((EntityCollectionService)_merchelloContext.Services.EntityCollectionService).CreateEntityCollectionWithKey(
+                    var collection = ((EntityCollectionService)_merchelloContext.Services.EntityCollectionService).CreateEntityCollection(
                         att.EntityTfKey,
                         att.Key,
                         att.Name);
 
+                    if (typeof(IEntityFilterGroupProvider).IsAssignableFrom(reg)) collection.IsFilter = true;
+                    _merchelloContext.Services.EntityCollectionService.Save(collection);
                     this.AddOrUpdateCache(collection.Key, reg);
                 }
             }

@@ -3,6 +3,7 @@
     using System;
     using System.Collections.Generic;
 
+    using Merchello.Core;
     using Merchello.Core.Models.Interfaces;
     using Merchello.Core.Persistence.Querying;
     using Merchello.Web.Models;
@@ -83,6 +84,11 @@
         /// Gets or sets the items per page.
         /// </summary>
         long ItemsPerPage { get; set; }
+
+        /// <summary>
+        /// Gets or sets the search term.
+        /// </summary>
+        string SearchTerm { get; set; }
 
         /// <summary>
         /// Gets or sets the sort by.

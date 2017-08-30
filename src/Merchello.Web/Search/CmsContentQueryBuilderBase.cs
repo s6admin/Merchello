@@ -4,6 +4,7 @@
     using System.Collections.Generic;
     using System.Linq;
 
+    using Merchello.Core;
     using Merchello.Core.Persistence.Querying;
     using Merchello.Web.Models;
     using Merchello.Web.Models.Ui.Rendering;
@@ -33,11 +34,6 @@
         private readonly HashSet<Guid> _collectionKeys = new HashSet<Guid>();
 
         /// <summary>
-        /// The search term.
-        /// </summary>
-        private string _searchTerm;
-
-        /// <summary>
         /// Gets or sets the page.
         /// </summary>
         public long Page { get; set; }
@@ -46,6 +42,11 @@
         /// Gets or sets the items per page.
         /// </summary>
         public long ItemsPerPage { get; set; }
+
+        /// <summary>
+        /// Gets or sets the search term.
+        /// </summary>
+        public string SearchTerm { get; set; }
 
         /// <summary>
         /// Gets or sets the sort by field.
@@ -81,7 +82,7 @@
         /// </param>
         public void AddConstraint(string searchTerm)
         {
-            _searchTerm = searchTerm;
+            SearchTerm = searchTerm;
         }
 
         /// <summary>
