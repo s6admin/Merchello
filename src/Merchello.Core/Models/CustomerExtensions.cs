@@ -351,35 +351,78 @@
         {
             Mandate.ParameterCondition(address.CustomerKey == customer.Key, "The customer address is not associated with this customer.");
 
-            var addressList = new List<ICustomerAddress>();
+			#region S6 Taken from Merchello v.2.5.0 release (correct code)
 
-            // REFACTOR-v3
-            // Caching issue - customerAddresses can return with a null address in the list, usually caused from the
-            // redundant cache item created by customer's being retrieved from the customer context.  (Added note there).
-            // HACK remove the null addresses here as are caused from items being removed without cache cleared correctly and
-            // which will allow things to proceed normally (and the cache correct itself in a hacky way).
-            var addresses = customer.Addresses.Where(x => x != null).ToList();
-            var isUpdate = false;
-            foreach (var adr in addresses)
-            {
-                if (address.IsDefault && adr.Key != address.Key && adr.AddressType == address.AddressType) adr.IsDefault = false;
+			var addressList = new List<ICustomerAddress>();
 
-                if (addresses.Any(x => x.Key == address.Key))
-                {
-                    isUpdate = true;
-                }
-  
-                addressList.Add(adr);
-            }
+			// REFACTOR-v3
+			// Caching issue - customerAddresses can return with a null address in the list, usually caused from the
+			// redundant cache item created by customer's being retrieved from the customer context.  (Added note there).
+			// HACK remove the null addresses here as are caused from items being removed without cache cleared correctly and
+			// which will allow things to proceed normally (and the cache correct itself in a hacky way).
+			var addresses = customer.Addresses.Where(x => x != null).ToList();
+			var isUpdate = false;
+			foreach (var adr in addresses)
+			{
+				if (address.IsDefault && adr.Key != address.Key && adr.AddressType == address.AddressType) adr.IsDefault = false;
 
-            if (!isUpdate) addresses.Add(address);            
+				if (adr.Key == address.Key)
+				{
+					//Update, add the new address
+					isUpdate = true;
+					//Carry over the IsDefault setting
+					address.IsDefault = adr.IsDefault;
+					addressList.Add(address);
+				}
+				else
+				{
+					addressList.Add(adr);
+				}
+			}
 
-            ((Customer)customer).Addresses = addresses;
+			if (!isUpdate) addressList.Add(address);
 
-            merchelloContext.Services.CustomerService.Save(customer);
+			((Customer)customer).Addresses = addressList;
 
-            return address;
-        }
+			merchelloContext.Services.CustomerService.Save(customer);
+
+			return address;
+
+			#endregion S6 v.2.5.0
+
+			#region Merchello v.2.4.0 release (BROKEN code)
+			// S6 The code below from the 2.4.0 release branch is WRONG. It incorrectly maps the same addresses object back to the customer when instead it should be mapping the addressList object instead
+			//var addressList = new List<ICustomerAddress>();
+
+			//// REFACTOR-v3
+			//// Caching issue - customerAddresses can return with a null address in the list, usually caused from the
+			//// redundant cache item created by customer's being retrieved from the customer context.  (Added note there).
+			//// HACK remove the null addresses here as are caused from items being removed without cache cleared correctly and
+			//// which will allow things to proceed normally (and the cache correct itself in a hacky way).
+			//var addresses = customer.Addresses.Where(x => x != null).ToList();
+			//var isUpdate = false;
+			//foreach (var adr in addresses)
+			//{
+			//    if (address.IsDefault && adr.Key != address.Key && adr.AddressType == address.AddressType) adr.IsDefault = false;
+
+			//    if (addresses.Any(x => x.Key == address.Key))
+			//    {
+			//        isUpdate = true;
+			//    }
+
+			//    addressList.Add(adr);
+			//}
+
+			//if (!isUpdate) addresses.Add(address);            
+
+			//((Customer)customer).Addresses = addresses;
+
+			//merchelloContext.Services.CustomerService.Save(customer);
+
+			//return address;
+
+			#endregion Merchello v.2.4.0
+		}
 
         /// <summary>
         /// The delete customer address.

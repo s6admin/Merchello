@@ -134,7 +134,7 @@
                 var address = BillingAddressFactory.Create(model);
 
                 // Temporarily save the address in the checkout manager.
-                this.CheckoutManager.Customer.SaveBillToAddress(address);
+                this.CheckoutManager.Customer.SaveBillToAddress(address); // S6 Does this ALSO cause a basket reset like we're seeing in SaveShippingAddress() ?
 
                 if (!this.CurrentCustomer.IsAnonymous) this.SaveCustomerBillingAddress(model);
 
@@ -171,7 +171,7 @@
                 var address = ShippingAddressFactory.Create(model);
 
                 // Temporarily save the address in the checkout manager.
-                this.CheckoutManager.Customer.SaveShipToAddress(address);
+                this.CheckoutManager.Customer.SaveShipToAddress(address); // S6 This is the call that starts deleting addresses because Checkoutmanager.Customer doesn't have all the records like CurrentCustomer does. Is this correct behavior?
 
                 if (!this.CurrentCustomer.IsAnonymous) this.SaveCustomerShippingAddress(model);
 
@@ -202,7 +202,7 @@
             TBillingAddress model = null;
 
             // Determine if we already have an address saved in the checkout manager
-            var address = CheckoutManager.Customer.GetBillToAddress();
+            var address = CheckoutManager.Customer.GetBillToAddress(); 
             if (address != null)
             {
                 model = BillingAddressFactory.Create(address);

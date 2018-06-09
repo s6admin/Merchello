@@ -17,9 +17,9 @@
     using Umbraco.Core.Persistence.SqlSyntax;
 
     /// <summary>
-    /// Represents an anonymous customer service.
+    /// Represents an anonymous customer service. S6 internal to public so we can hook events
     /// </summary>
-    internal class AnonymousCustomerService : MerchelloRepositoryService, IAnonymousCustomerService
+    public class AnonymousCustomerService : MerchelloRepositoryService, IAnonymousCustomerService
     {
          #region fields
 
@@ -154,8 +154,7 @@
 
 
         #endregion
-
-
+		
         /// <summary>
         /// The create anonymous customer with key.
         /// </summary>

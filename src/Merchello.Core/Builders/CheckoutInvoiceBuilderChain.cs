@@ -92,18 +92,20 @@
 
             if (!attempt.Success) return attempt;
 
+
+			var charges = attempt.Result.Items.Where(x => x.LineItemType != LineItemType.Discount).Sum(x => x.TotalPrice);
+			var discounts = attempt.Result.Items.Where(x => x.LineItemType == LineItemType.Discount).Sum(x => x.TotalPrice);
 			// S6 We are adding rounding here to each TotalPrice otherwise the sum calculation is sometimes off by a penny
-			//var charges = attempt.Result.Items.Where(x => x.LineItemType != LineItemType.Discount).Sum(x => x.TotalPrice);
-			//var discounts = attempt.Result.Items.Where(x => x.LineItemType == LineItemType.Discount).Sum(x => x.TotalPrice);
-			var charges = attempt.Result.Items.Where(x => x.LineItemType != LineItemType.Discount).Sum(x => Math.Round(x.TotalPrice, 2, MidpointRounding.AwayFromZero));
-            var discounts = attempt.Result.Items.Where(x => x.LineItemType == LineItemType.Discount).Sum(x => Math.Round(x.TotalPrice, 2, MidpointRounding.AwayFromZero));
+			//var charges = attempt.Result.Items.Where(x => x.LineItemType != LineItemType.Discount).Sum(x => Math.Round(x.TotalPrice, 2, MidpointRounding.AwayFromZero));
+			//var discounts = attempt.Result.Items.Where(x => x.LineItemType == LineItemType.Discount).Sum(x => Math.Round(x.TotalPrice, 2, MidpointRounding.AwayFromZero));
 
-            // total the invoice
-            decimal converted;
+			// total the invoice
+			decimal converted;
 
+
+			attempt.Result.Total = Math.Round(decimal.TryParse((charges - discounts).ToString(CultureInfo.InvariantCulture), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture.NumberFormat, out converted) ? converted : 0, 2);
 			// S6 Implement Midpoint rounding instead of C# default bankers rounding http://stackoverflow.com/questions/977796/why-does-math-round2-5-return-2-instead-of-3
-			//attempt.Result.Total = Math.Round(decimal.TryParse((charges - discounts).ToString(CultureInfo.InvariantCulture), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture.NumberFormat, out converted) ? converted : 0, 2);
-			attempt.Result.Total = Math.Round(decimal.TryParse((charges - discounts).ToString(CultureInfo.InvariantCulture), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture.NumberFormat, out converted) ? converted : 0, 2, MidpointRounding.AwayFromZero);
+			//attempt.Result.Total = Math.Round(decimal.TryParse((charges - discounts).ToString(CultureInfo.InvariantCulture), NumberStyles.AllowDecimalPoint, CultureInfo.InvariantCulture.NumberFormat, out converted) ? converted : 0, 2, MidpointRounding.AwayFromZero);
 
 			return attempt;
         }
