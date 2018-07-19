@@ -17,10 +17,11 @@
     using Umbraco.Core.Logging;
     using Umbraco.Core.Persistence.SqlSyntax;
 
+	// S6 Modified to public so we can hook events
     /// <summary>
     /// The customer address service.
     /// </summary>
-    internal class CustomerAddressService : MerchelloRepositoryService, ICustomerAddressService
+    public class CustomerAddressService : MerchelloRepositoryService, ICustomerAddressService
     {
         /// <summary>
         /// The locker.
