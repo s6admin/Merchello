@@ -375,6 +375,10 @@
     <Compile Include="Payment\PayPal\Services\PayPalApiService.cs" />
     <Compile Include="Payment\PayPal\Services\PayPalApiServiceBase.cs" />
     <Compile Include="Payment\PayPal\Services\PayPalExpressCheckoutService.cs" />
+    <Compile Include="Payment\PayTrace\Provider\IPayTracePaymentGatewayMethod.cs" />
+    <Compile Include="Payment\PayTrace\Provider\IPayTracePaymentGatewayProvider.cs" />
+    <Compile Include="Payment\PayTrace\Provider\PayTracePaymentGatewayMethod.cs" />
+    <Compile Include="Payment\PayTrace\Provider\PayTracePaymentGatewayProvider.cs" />
     <Compile Include="Payment\PurchaseOrder\PurchaseOrderFormData.cs" />
     <Compile Include="Payment\PurchaseOrder\PurchaseOrderInfoExtensions.cs" />
     <Compile Include="Payment\PurchaseOrder\Provider\IPurchaseOrderPaymentGatewayMethod.cs" />
@@ -402,6 +406,7 @@
     <None Include="packages.config" />
     <None Include="Settings.StyleCop" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\AutoMapper.3.3.1\tools\AutoMapper.targets" Condition="Exists('..\packages\AutoMapper.3.3.1\tools\AutoMapper.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

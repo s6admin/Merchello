@@ -272,6 +272,7 @@
     <Compile Include="Controllers\CheckoutShipRateQuoteController.cs" />
     <Compile Include="Controllers\CheckoutSummaryController.cs" />
     <Compile Include="Controllers\Payment\FastTrackBraintreeControllerBase.cs" />
+    <Compile Include="Controllers\Payment\PayTracePaymentController.cs" />
     <Compile Include="Controllers\Payment\PurchaseOrderPaymentController.cs" />
     <Compile Include="Factories\FastTrackBillingAddressModelFactory.cs" />
     <Compile Include="Factories\FastTrackCheckoutAddressModelFactoryBase{T}.cs" />
@@ -294,6 +295,7 @@
     <Compile Include="Models\Membership\LoginModel.cs" />
     <Compile Include="Models\Membership\NewMemberModel.cs" />
     <Compile Include="Models\Payment\FastTrackPaymentModel.cs" />
+    <Compile Include="Models\Payment\PayTracePaymentModel.cs" />
     <Compile Include="Models\Payment\PurchaseOrderPaymentModel.cs" />
     <Compile Include="PackageActions\AddConfigSection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
