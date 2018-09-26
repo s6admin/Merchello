@@ -39,7 +39,7 @@ namespace Merchello.FastTrack.Controllers.Payment
 		}
 
 		/// <summary>
-		/// Processes the PO payment.
+		/// Processes the PayTrace payment.
 		/// </summary>
 		/// <param name="model">
 		/// The <see cref="ICheckoutPaymentModel"/>.
@@ -60,8 +60,7 @@ namespace Merchello.FastTrack.Controllers.Payment
 										{Merchello.Providers.Constants.PurchaseOrder.PoStringKey, model.PurchaseOrderNumber} // S6 The original namespace for this in the tutorial has changed 
 									};
 
-				// For PO payments we can only perform an authorize
-				var attempt = this.CheckoutManager.Payment.AuthorizePayment(paymentMethod.Key, args);
+				var attempt = this.CheckoutManager.Payment.AuthorizeCapturePayment(paymentMethod.Key, args);
 
 				var resultModel = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod, attempt);
 

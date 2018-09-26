@@ -7,7 +7,7 @@ using Merchello.Core.Models;
 using Merchello.Core.Services;
 using Umbraco.Core.Cache;
 using Umbraco.Core.Logging;
-
+// S6 Payment Providers are primarily responsible for wiring a payment portal into the Merchello Gateway dashboard UI.
 namespace Merchello.Providers.Payment.PayTrace.Provider
 {
 	[GatewayProviderActivation("493B34D2-1A98-464D-9EE5-1A75F8D50353", "PayTrace Payment Provider", "PayTrace Payment Provider")]
