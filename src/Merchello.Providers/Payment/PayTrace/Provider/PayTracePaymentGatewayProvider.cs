@@ -1,16 +1,32 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using Merchello.Core.Gateways;
-using Merchello.Core.Gateways.Payment;
-using Merchello.Core.Models;
-using Merchello.Core.Services;
-using Umbraco.Core.Cache;
-using Umbraco.Core.Logging;
+﻿
 // S6 Payment Providers are primarily responsible for wiring a payment portal into the Merchello Gateway dashboard UI.
 namespace Merchello.Providers.Payment.PayTrace.Provider
 {
-	[GatewayProviderActivation("493B34D2-1A98-464D-9EE5-1A75F8D50353", "PayTrace Payment Provider", "PayTrace Payment Provider")]
+
+	using System;
+	using System.Collections.Generic;
+	using System.Linq;
+	using Merchello.Core.Gateways;
+	using Merchello.Core.Gateways.Payment;
+	using Merchello.Core.Models;
+	using Merchello.Core.Services;
+	using Umbraco.Core.Cache;
+	using Umbraco.Core.Logging;
+	using Merchello.Providers.Payment.PayTrace.Services;
+	using Merchello.Core.Logging;
+	using Merchello.Providers.Payment.PayTrace.Models;
+	using Newtonsoft.Json;
+	
+	using Merchello.Providers.Models;
+	using Merchello.Providers.Payment.Models;
+	using Merchello.Providers.Payment.PayPal.Models;
+	using Merchello.Providers.Payment.PayPal.Services;
+
+	using Constants = Merchello.Providers.Constants;
+	
+	//[GatewayProviderEditor(...)]
+	[GatewayProviderActivation("TODO-KEY", "PayTrace Payment Provider", "PayTrace Payment Provider")]
+	[ProviderSettingsMapper(Constants.PayTrace.ExtendedDataKeys.ProviderSettings, typeof(PayTraceProviderSettings))]
 	public class PayTracePaymentGatewayProvider : PaymentGatewayProviderBase, IPayTracePaymentGatewayProvider
 	{
 		#region AvailableResources
@@ -19,8 +35,7 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 		/// The available resources.
 		/// </summary>
 		internal static readonly IEnumerable<IGatewayResource> AvailableResources = new List<IGatewayResource>
-		{
-			//new GatewayResource("PurchaseOrder", "Purchase Order")
+		{			
 			new GatewayResource("PayTraceOrder", "PayTrace Order")
 		};
 
@@ -74,18 +89,32 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 		/// </returns>
 		public override IPaymentGatewayMethod CreatePaymentMethod(IGatewayResource gatewayResource, string name, string description)
 		{
-			var paymentCode = gatewayResource.ServiceCode + "-" + Guid.NewGuid();
+			// assert gateway resource is still available
+			var available = this.ListResourcesOffered()
+				.FirstOrDefault(x => x.ServiceCode == gatewayResource.ServiceCode);
+			if (available == null) throw new InvalidOperationException("GatewayResource has already been assigned");
 
-			var attempt = GatewayProviderService.CreatePaymentMethodWithKey(GatewayProviderSettings.Key, name, description, paymentCode);
+			var attempt = this.GatewayProviderService.CreatePaymentMethodWithKey(
+				this.GatewayProviderSettings.Key,
+				name,
+				description,
+				available.ServiceCode);
+
 
 			if (attempt.Success)
 			{
-				PaymentMethods = null;
+				this.PaymentMethods = null;
 
-				return new PayTracePaymentGatewayMethod(GatewayProviderService, attempt.Result);
+				return GetPaymentGatewayMethodByPaymentCode(available.ServiceCode);
 			}
 
-			LogHelper.Error<PayTracePaymentGatewayProvider>(string.Format("Failed to create a payment method name: {0}, description {1}, paymentCode {2}", name, description, paymentCode), attempt.Exception);
+			LogHelper.Error<PayTracePaymentGatewayProvider>(
+				string.Format(
+					"Failed to create a payment method name: {0}, description {1}, paymentCode {2}",
+					name,
+					description,
+					available.ServiceCode),
+				attempt.Exception);
 
 			throw attempt.Exception;
 		}
@@ -97,11 +126,11 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 		/// <returns>A <see cref="IPaymentGatewayMethod"/></returns>
 		public override IPaymentGatewayMethod GetPaymentGatewayMethodByKey(Guid paymentMethodKey)
 		{
-			var paymentMethod = PaymentMethods.FirstOrDefault(x => x.Key == paymentMethodKey);
+			var paymentMethod = this.PaymentMethods.FirstOrDefault(x => x.Key == paymentMethodKey);
 
 			if (paymentMethod == null) throw new NullReferenceException("PaymentMethod not found");
 
-			return new PayTracePaymentGatewayMethod(GatewayProviderService, paymentMethod);
+			return GetPaymentGatewayMethodByPaymentCode(paymentMethod.PaymentCode);
 		}
 
 		/// <summary>
@@ -111,11 +140,58 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 		/// <returns>A <see cref="IPaymentGatewayMethod"/></returns>
 		public override IPaymentGatewayMethod GetPaymentGatewayMethodByPaymentCode(string paymentCode)
 		{
-			var paymentMethod = PaymentMethods.FirstOrDefault(x => x.PaymentCode == paymentCode);
+			var paymentMethod = this.PaymentMethods.FirstOrDefault(x => x.PaymentCode == paymentCode);
 
-			if (paymentMethod == null) throw new NullReferenceException("PaymentMethod not found");
+			if (paymentMethod != null)
+			{
+				switch (paymentCode)
+				{
+					case Constants.PayTrace.PaymentCodes.Checkout:
+						return new PayTracePaymentGatewayMethod(
+							this.GatewayProviderService,
+							paymentMethod,
+							GetPayTraceApiService());
+						//// TODO add additional payment methods here 
+				}
+			}
 
-			return new PayTracePaymentGatewayMethod(GatewayProviderService, paymentMethod);
+			var logData = MultiLogger.GetBaseLoggingData();
+			logData.AddCategory("GatewayProviders");
+			logData.AddCategory("PayTrace");
+
+			var nullRef =
+				new NullReferenceException(string.Format("PaymentMethod not found for payment code: {0}", paymentCode));
+			MultiLogHelper.Error<PayTracePaymentGatewayProvider>(
+				"Failed to find payment method for payment code",
+				nullRef,
+				logData);
+
+			throw nullRef;
+		}
+
+		/// <summary>
+		/// Gets the <see cref="IPayTraceApiService"/>.
+		/// </summary>
+		/// <returns>
+		/// The <see cref="IPayTraceApiService"/>.
+		/// </returns>
+		private IPayTraceApiService GetPayTraceApiService()
+		{
+			// S6 Extracted so we don't need to modify the shared Merchello.Providers.ProviderSettingsExtensions.cs
+			PayTraceProviderSettings settings;
+			if (this.ExtendedData.ContainsKey(Constants.PayTrace.ExtendedDataKeys.ProviderSettings))
+			{
+				var json = this.ExtendedData.GetValue(Constants.PayTrace.ExtendedDataKeys.ProviderSettings);
+				settings = JsonConvert.DeserializeObject<PayTraceProviderSettings>(json);
+			}
+			else
+			{
+				settings = new PayTraceProviderSettings();
+			}
+
+			return new PayTraceApiService(settings);
+			
+			//return new PayTraceApiService(this.ExtendedData.GetPayTraceProviderSettings());
 		}
 
 		/// <summary>

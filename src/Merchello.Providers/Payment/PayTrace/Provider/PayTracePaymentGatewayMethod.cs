@@ -8,17 +8,24 @@ using Merchello.Core.Services;
 using Umbraco.Core;
 using Merchello.Providers.Payment.PurchaseOrder;
 using System.Diagnostics;
+using Merchello.Providers.Payment.PayTrace.Services;
+using Merchello.Providers.Exceptions;
+using Merchello.Providers.Payment.PayTrace.Models;
 
 namespace Merchello.Providers.Payment.PayTrace.Provider
 {
+	//[GatewayMethodEditor(...)]
 	[GatewayMethodUi("PayTrace.PurchaseOrder")]
 	[PaymentGatewayMethod("PayTrace Method Editors",
 	   "",
 	   "",
 	   "~/App_Plugins/MerchelloProviders/views/dialogs/voidpayment.confirm.html",
-	   "")]
-	public class PayTracePaymentGatewayMethod : PaymentGatewayMethodBase, IPayTracePaymentGatewayMethod
+	   "~/App_Plugins/MerchelloProviders/views/dialogs/refundpayment.confirm.html")]
+	public class PayTracePaymentGatewayMethod : RedirectPaymentMethodBase
 	{
+
+		private readonly IPayTraceApiService _payTraceApiService;
+
 		/// <summary>
 		/// Initializes a new instance of the <see cref="PayTracePaymentGatewayMethod"/> class.
 		/// </summary>
@@ -28,21 +35,57 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 		/// <param name="paymentMethod">
 		/// The payment method.
 		/// </param>
-		public PayTracePaymentGatewayMethod(IGatewayProviderService gatewayProviderService, IPaymentMethod paymentMethod)
+		public PayTracePaymentGatewayMethod(IGatewayProviderService gatewayProviderService, IPaymentMethod paymentMethod, IPayTraceApiService payTraceApiService)
             : base(gatewayProviderService, paymentMethod)
         {
+			Ensure.ParameterNotNull(payTraceApiService, "payTraceApiService");
+			this._payTraceApiService = payTraceApiService;
 		}
 
 		/// <summary>
-		/// Does the actual work of creating and processing the payment
+		/// Does the actual work of creating and processing the payment (based on PayTrace  redirect provider)
 		/// </summary>
 		/// <param name="invoice">The <see cref="IInvoice"/></param>
 		/// <param name="args">Any arguments required to process the payment.</param>
 		/// <returns>The <see cref="IPaymentResult"/></returns>
 		protected override IPaymentResult PerformAuthorizePayment(IInvoice invoice, ProcessorArgumentCollection args)
 		{
-			throw new NotImplementedException();
-			
+
+			var payment = GatewayProviderService.CreatePayment(PaymentMethodType.Redirect, invoice.Total, PaymentMethod.Key);
+			payment.CustomerKey = invoice.CustomerKey;
+			payment.PaymentMethodName = PaymentMethod.Name;
+			payment.ReferenceNumber = PaymentMethod.PaymentCode + "-" + invoice.PrefixedInvoiceNumber();
+			payment.Collected = false;
+			payment.Authorized = false; // this is technically not the authorization.  We'll mark this in a later step.
+
+			// Have to save here to generate the payment key
+			GatewayProviderService.Save(payment);
+
+			// Now we want to get things setup for the Checkout
+			var record = this._payTraceApiService.Checkout.SetCheckout(invoice, payment);				
+			payment.SavePayTraceTransactionRecord(record);
+
+			// Have to save here to persist the record so it can be used in later processing.
+			GatewayProviderService.Save(payment);
+
+			// In this case, we want to do our own Apply Payment operation as the amount has not been collected -
+			// so we create an applied payment with a 0 amount.  Once the payment has been "collected", another Applied Payment record will
+			// be created showing the full amount and the invoice status will be set to Paid.
+			GatewayProviderService.ApplyPaymentToInvoice(payment.Key, invoice.Key, AppliedPaymentType.Debit, string.Format("To show promise of a {0} payment via PayTrace Checkout", PaymentMethod.Name), 0);
+
+
+			// if the response was successful return a success IPaymentResult
+			if (record.Success)
+			{
+				return new PaymentResult(Attempt<IPayment>.Succeed(payment), invoice, false, record.SetCheckout.RedirectUrl);
+			}
+
+			// In the case of a failure, package up the exception so we can bubble it up.
+			var ex = new PayTraceApiException("PayTrace Checkout initial response was declined.");
+			if (record.SetCheckout.ErrorTypes.Any()) ex.ErrorTypes = record.SetCheckout.ErrorTypes;
+
+			return new PaymentResult(Attempt<IPayment>.Fail(payment, ex), invoice, false);
+
 			// S6 Demo PO code, not for production
 			//var po = args.AsPurchaseOrderFormData();
 
@@ -75,7 +118,7 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 		}
 
 		/// <summary>
-		/// Does the actual work of authorizing and capturing a payment
+		/// Does the actual work of authorizing and capturing a payment (based on PurchaseOrder demo)
 		/// </summary>
 		/// <param name="invoice">The <see cref="IInvoice"/></param>
 		/// <param name="amount">The amount to capture</param>
@@ -122,7 +165,8 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 			KeyedSaleGenerator keyedSaleGenerator = new KeyedSaleGenerator();
 
 			// Assign the values to the key Sale Request.
-			requestKeyedSale = BuildRequestFromFields(requestKeyedSale);
+			// S6 TODO If client expects to use the PayTrace REDIRECT we can't supplied the form field values like this b/c they would be submitted via our own form
+			requestKeyedSale = BuildRequestFromFields(requestKeyedSale, invoice, amount, args);
 
 			// To make Keyed Sale Request and store the response
 			var keyedSaleResult = keyedSaleGenerator.KeyedSaleTrans(OAuth, requestKeyedSale);
@@ -180,8 +224,7 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 					MerchelloContext.Current.Services.InvoiceService.Save(invoice);
 
 					this.GatewayProviderService.Save(payment);
-
-					// TODO Debit or Credit?
+										
 					this.GatewayProviderService.ApplyPaymentToInvoice(payment.Key, invoice.Key, AppliedPaymentType.Debit, successMsg, amount);
 
 					return new PaymentResult(Attempt<IPayment>.Succeed(payment), invoice, true);
@@ -195,9 +238,7 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 					//DisplaySaleResponse(result);
 					Debug.WriteLine("Error : " + keyedSaleResult.HttpErrorMessage + "<br/>");
 
-				}
-
-				// Do your code for any additional task(s)
+				}				
 			}
 
 			throw new NotImplementedException();
@@ -247,12 +288,12 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 
 		//}
 
-		protected KeyedSaleRequest BuildRequestFromFields(KeyedSaleRequest requestKeyedSale)
+		protected KeyedSaleRequest BuildRequestFromFields(KeyedSaleRequest requestKeyedSale, IInvoice invoice, decimal amount, ProcessorArgumentCollection args)
 		{
-			// TODO Build Keyed Sale Request fields from the input source
-			// requestKeyedSale.InvoiceId = 
 
-			requestKeyedSale.Amount = 2.50;
+			requestKeyedSale.InvoiceId = invoice.PoNumber;
+
+		    requestKeyedSale.Amount = decimal.ToDouble(amount);
 
 			requestKeyedSale.ObjCreditCard = new CreditCard();
 			requestKeyedSale.ObjCreditCard.CcNumber = "4111111111111111";
@@ -268,6 +309,21 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 			requestKeyedSale.ObjBillingAddress.City = "Spokane";
 			requestKeyedSale.ObjBillingAddress.State = "WA";
 			requestKeyedSale.ObjBillingAddress.Zip = "85284";
+
+			/*
+				TODO Optional PayTrace parameters if requested by client:
+
+				shipping_address
+				email
+				description
+				tax_amount
+				customer_reference_id
+				return_clr
+				custom_dba
+				enable_partial_authorization
+				discretionary_data
+
+			*/
 			
 			return requestKeyedSale;
 
