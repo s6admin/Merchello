@@ -19,6 +19,8 @@ namespace Merchello.Providers
             return string.Format("grant_type={0}&username={1}&password={2}", GrantType, UserName,Password);
         }
     }
+
+	// S6 TODO Some of the below classes could be broken out to Merchello.FastTrack.Models so they can inherit from FastTrackPaymentModel
     
     /// <summary>
 	/// Class contains base url and all request URLs 
@@ -254,10 +256,6 @@ namespace Merchello.Providers
         public string Testing_DisData { get; set; }
 
 	}
-
-
-
-
-
+		
 }
 

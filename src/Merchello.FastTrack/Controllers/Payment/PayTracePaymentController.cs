@@ -11,7 +11,11 @@ namespace Merchello.FastTrack.Controllers.Payment
 	using Providers.Payment.PurchaseOrder;
 	using Umbraco.Web.Mvc;
 	using Web.Models.Ui;
-	
+	using Providers;
+	using Web.Models.Ui.Async;
+
+	// S6 This is intended for use with the front-end PayTrace provider, not the redirect provider
+
 	[PluginController("FastTrack")]
 	[GatewayMethodUi("PayTrace.PurchaseOrder")]
 	public class PayTracePaymentController : CheckoutPaymentControllerBase<PayTracePaymentModel>
@@ -33,9 +37,18 @@ namespace Merchello.FastTrack.Controllers.Payment
 				CustomerContext.SetValue("invoiceKey", model.ViewData.InvoiceKey.ToString());
 			}
 
-			return model.ViewData.Success && !model.SuccessRedirectUrl.IsNullOrWhiteSpace() ?
-				Redirect(model.SuccessRedirectUrl) :
-				base.HandlePaymentSuccess(model);
+			if (Request.IsAjaxRequest())
+			{
+				var json = Json(GetAsyncResponse(model));
+
+				return json;
+			}
+
+			return base.HandlePaymentSuccess(model);
+
+			//return model.ViewData.Success && !model.SuccessRedirectUrl.IsNullOrWhiteSpace() ?
+			//	Redirect(model.SuccessRedirectUrl) :
+			//	base.HandlePaymentSuccess(model);
 		}
 
 		/// <summary>
@@ -56,9 +69,9 @@ namespace Merchello.FastTrack.Controllers.Payment
 
 				// Create the processor argument collection, where we'll pass in the purchase order
 				var args = new ProcessorArgumentCollection
-									{
-										{Merchello.Providers.Constants.PurchaseOrder.PoStringKey, model.PurchaseOrderNumber} // S6 The original namespace for this in the tutorial has changed 
-									};
+				{
+					{Merchello.Providers.Constants.PurchaseOrder.PoStringKey, model.OrderNumber}
+				};
 
 				var attempt = this.CheckoutManager.Payment.AuthorizeCapturePayment(paymentMethod.Key, args);
 
@@ -97,6 +110,48 @@ namespace Merchello.FastTrack.Controllers.Payment
 			var model = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod);
 
 			return view.IsNullOrWhiteSpace() ? this.PartialView(model) : this.PartialView(view, model);
+		}
+
+		/// <summary>
+		/// Gets the <see cref="PaymentResultAsyncResponse"/> for the model.
+		/// </summary>
+		/// <param name="model">
+		/// The <see cref="BraintreePaymentModel"/>.
+		/// </param>
+		/// <returns>
+		/// The <see cref="PaymentResultAsyncResponse"/>.
+		/// </returns>
+		protected virtual PaymentResultAsyncResponse GetAsyncResponse(PayTracePaymentModel model)
+		{
+			var resp = new PaymentResultAsyncResponse
+			{
+				Success = model.ViewData.Success,
+				InvoiceKey = model.ViewData.InvoiceKey,
+				PaymentKey = model.ViewData.PaymentKey,
+				ItemCount = GetBasketItemCountForDisplay(),
+				PaymentMethodName = model.PaymentMethodName
+			};
+
+			foreach (var msg in model.ViewData.Messages) resp.Messages.Add(msg);
+
+			return resp;
+		}
+
+		/// <summary>
+		/// Gets the total basket count.
+		/// </summary>
+		/// <returns>
+		/// The <see cref="int"/>.
+		/// </returns>
+		/// <remarks>
+		/// This is generally used in navigations and labels.  Some implementations show the total number of line items while
+		/// others show the total number of items (total sum of product quantities - default).
+		/// 
+		/// Method is used in Async responses to allow for easier HTML label updates 
+		/// </remarks>
+		protected virtual int GetBasketItemCountForDisplay()
+		{
+			return this.Basket.TotalQuantityCount;
 		}
 	}
 }

@@ -122,7 +122,7 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 			KeyedSaleGenerator keyedSaleGenerator = new KeyedSaleGenerator();
 
 			// Assign the values to the key Sale Request.
-			requestKeyedSale = BuildRequestFromFields(requestKeyedSale);
+			requestKeyedSale = BuildRequestFromFields(requestKeyedSale); // TODO These values need to be mapped from the custom PaymentForm
 
 			// To make Keyed Sale Request and store the response
 			var keyedSaleResult = keyedSaleGenerator.KeyedSaleTrans(OAuth, requestKeyedSale);
@@ -180,8 +180,7 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 					MerchelloContext.Current.Services.InvoiceService.Save(invoice);
 
 					this.GatewayProviderService.Save(payment);
-
-					// TODO Debit or Credit?
+										
 					this.GatewayProviderService.ApplyPaymentToInvoice(payment.Key, invoice.Key, AppliedPaymentType.Debit, successMsg, amount);
 
 					return new PaymentResult(Attempt<IPayment>.Succeed(payment), invoice, true);
