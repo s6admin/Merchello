@@ -272,6 +272,7 @@
     <Compile Include="Controllers\StoreWishListController.cs" />
     <Compile Include="Factories\BraintreePaymentModelFactory.cs" />
     <Compile Include="Factories\ItemCacheModelFactory.cs" />
+    <Compile Include="Factories\PayTracePaymentModelFactory.cs" />
     <Compile Include="Localization\StoreFormsResource.Designer.cs">
       <DependentUpon>StoreFormsResource.resx</DependentUpon>
       <AutoGen>True</AutoGen>
@@ -283,6 +284,7 @@
     <Compile Include="Models\BraintreeCcPaymentModel.cs" />
     <Compile Include="Models\BraintreePaymentModel.cs" />
     <Compile Include="Models\IPurchaseOrderPaymentModel.cs" />
+    <Compile Include="Models\PayTraceEncryptedPaymentModel.cs" />
     <Compile Include="Models\StoreItemCacheModel.cs" />
     <Compile Include="Models\StorePaymentModel.cs" />
     <Compile Include="Models\StoreAddressModel.cs" />

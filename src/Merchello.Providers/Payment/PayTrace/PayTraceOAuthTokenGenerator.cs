@@ -27,6 +27,10 @@ namespace Merchello.Providers
 
 			try
 			{
+				// S6 Keep SecurityProtocol declarations BEFORE any webrequest.create calls ( .NET 4.5+ requirement per https://stackoverflow.com/questions/28286086/default-securityprotocol-in-net-4-5#comment-88724659 )
+				//ServicePointManager.SecurityProtocol = (SecurityProtocolType)192 | (SecurityProtocolType)768 | (SecurityProtocolType)3072;
+				ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls | SecurityProtocolType.Tls11 | SecurityProtocolType.Tls12;				
+
 				// Create a request using a URL that can receive a post. 
 				WebRequest request = WebRequest.Create(BaseUrl + OAuthUrl);
 
@@ -54,23 +58,23 @@ namespace Merchello.Providers
 					https://stackoverflow.com/questions/28286086/default-securityprotocol-in-net-4-5	
 					https://stackoverflow.com/questions/46929171/tls-1-2-error-could-not-create-ssl-tls-secure-channel
 				*/
+				// S6 Moved above before any webrequest.create calls (.NET 4.5+ requirement per https://stackoverflow.com/questions/28286086/default-securityprotocol-in-net-4-5#comment-88724659)
 				//ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
-				ServicePointManager.SecurityProtocol = (SecurityProtocolType)192 | (SecurityProtocolType)768 | (SecurityProtocolType)3072;
-
+				
 				// Get the request stream.
-				dataStream = request.GetRequestStream (); 
+				dataStream = request.GetRequestStream(); 
 
 				// Write the data to the request stream.
 				dataStream.Write(byteArray, 0, byteArray.Length);
 				// Close the Stream object.
-				dataStream.Close ();
+				dataStream.Close();
 
 				// To Get the response.
-				response = request.GetResponse ();
+				response = request.GetResponse();
 
 				// Assuming Respose status is OK otherwise catch{} will be excuted 
 				// Get the stream containing content returned by the server.
-				dataStream = response.GetResponseStream ();
+				dataStream = response.GetResponseStream();
 
 				// Open the stream using a StreamReader for easy access.
 				reader = new StreamReader (dataStream);

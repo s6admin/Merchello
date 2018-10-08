@@ -7,7 +7,9 @@ using Merchello.Core.Models;
 using Merchello.Core.Services;
 using Umbraco.Core;
 using Merchello.Providers.Payment.PurchaseOrder;
+using Merchello.Providers;
 using System.Diagnostics;
+using Newtonsoft.Json;
 
 namespace Merchello.Providers.Payment.PayTrace.Provider
 {
@@ -83,73 +85,77 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 		/// <returns>The <see cref="IPaymentResult"/></returns>
 		protected override IPaymentResult PerformAuthorizeCapturePayment(IInvoice invoice, decimal amount, ProcessorArgumentCollection args)
 		{
-			
-			PayTraceOAuthTokenGenerator tokenGenerator = new PayTraceOAuthTokenGenerator();
-			var paytraceTokenResult = tokenGenerator.GetToken();
+			/* 
+				TODO 
+				We already generate a token in the controller.Process method. Should it remain there or here (passed as an args property or create directly)?
+				It isn't used for any purpose in Process other than to prevent the ProcessPayment attempt, which ultimately leads here, maybe creates some extra eComm steps...
+			*/
+			//PayTraceOAuthTokenGenerator tokenGenerator = new PayTraceOAuthTokenGenerator();
+			//var paytraceTokenResult = tokenGenerator.GetToken();
 		
-			// Determine whether OAuthToken is successful and make a request
-			if (paytraceTokenResult.ErrorFlag != false)
-			{
-				string errorMsg = "Could not authenticate token with PayTrace for Invoice " + invoice.PoNumber;
-				if(paytraceTokenResult.ObjError != null)
-				{
-					errorMsg += paytraceTokenResult.ObjError.Error ?? string.Empty;
-					errorMsg += paytraceTokenResult.ObjError.ErrorDescription ?? string.Empty;
-					errorMsg += paytraceTokenResult.ObjError.HttpTokenError ?? string.Empty;
-				}
+			//// Determine whether OAuthToken is successful and make a request
+			//if (paytraceTokenResult.ErrorFlag != false)
+			//{
+			//	string errorMsg = "Could not authenticate token with PayTrace for Invoice " + invoice.PoNumber;
+			//	if(paytraceTokenResult.ObjError != null)
+			//	{
+			//		errorMsg += paytraceTokenResult.ObjError.Error ?? string.Empty;
+			//		errorMsg += paytraceTokenResult.ObjError.ErrorDescription ?? string.Empty;
+			//		errorMsg += paytraceTokenResult.ObjError.HttpTokenError ?? string.Empty;
+			//	}
 
-                return new PaymentResult(Attempt<IPayment>.Fail(new Exception(errorMsg)), invoice, false);
-			}
+			//return new PaymentResult(Attempt<IPayment>.Fail(new Exception(errorMsg)), invoice, false);
+			//}
 
-			// If PayTrace token is retrieved without errors, continue attempting to process payment
-			
+			// If PayTrace token is retrieved without errors, continue attempting to process payment			
 			var payment = GatewayProviderService.CreatePayment(PaymentMethodType.PurchaseOrder, amount, PaymentMethod.Key);
 			payment.CustomerKey = invoice.CustomerKey;
 			payment.PaymentMethodName = PaymentMethod.Name;
 			payment.ReferenceNumber = PaymentMethod.PaymentCode + "-" + invoice.PrefixedInvoiceNumber();			
-			var pod = args.AsPurchaseOrderFormData();
-
+			//var pod = args.AsPurchaseOrderFormData();
+			
 			// In case of not using any OAuth2.0 Library
 			// Use following when OAuth2.0 is caseinsesitive at Paytrace. 
 			// string OAuth = String.Format ("{0} {1}", OAuthResult.token_type, OAuthResult.access_token);
 			// For now OAuth2.0  is not caseinsesitive at PayTrace - ESC-141
-			string OAuth = String.Format("Bearer {0}", paytraceTokenResult.AccessToken);
+
+			string token = args.ContainsKey("access_token") ? args.First(x => x.Key == "access_token").Value : string.Empty;
+            string OAuth = String.Format("Bearer {0}", token); // paytraceTokenResult.AccessToken
 						
-			// Key Sale Request
 			KeyedSaleRequest requestKeyedSale = new KeyedSaleRequest();
-
-			//KeySale Transaction Generator
+						
 			KeyedSaleGenerator keyedSaleGenerator = new KeyedSaleGenerator();
-
-			// Assign the values to the key Sale Request.
-			requestKeyedSale = BuildRequestFromFields(requestKeyedSale); // TODO These values need to be mapped from the custom PaymentForm
-
+						
+			requestKeyedSale = PopulateRequestData(requestKeyedSale, args);
+						
 			// To make Keyed Sale Request and store the response
 			var keyedSaleResult = keyedSaleGenerator.KeyedSaleTrans(OAuth, requestKeyedSale);
 
 			if (keyedSaleResult != null && keyedSaleResult.HttpErrorMessage != null && keyedSaleResult.Success == false)
 			{
+
 				// Http Error(s) processing payment
-
-				Debug.WriteLine("<br/>" + "Http Error Code & Error : " + keyedSaleResult.HttpErrorMessage + "<br/>");
-				Debug.WriteLine("Success : " + keyedSaleResult.Success + "<br/>");
-				Debug.WriteLine("response_code : " + keyedSaleResult.ResponseCode + "<br/>");
-				Debug.WriteLine("status_message : " + keyedSaleResult.StatusMessage + "<br/>");
-				Debug.WriteLine("external_transaction_id : " + keyedSaleResult.ExternalTransactionId + "<br/>");
-				Debug.WriteLine("masked_card_number : " + keyedSaleResult.MaskedCardNumber + "<br/>");
-
-				// Check the actual API errors with appropriate code
-				Debug.WriteLine(" API errors : " + "<br/>");
-				foreach (var item in keyedSaleResult.TransactionErrors)
-				{
-					// to read Error message with each error code in array.
-					foreach (var errorMessage in (string[])item.Value)
+				string errorMsg = "Http Error Code & Error : " + keyedSaleResult.HttpErrorMessage + "<br/>";
+				errorMsg += "Success : " + keyedSaleResult.Success + "<br/>";
+				errorMsg += "response_code : " + keyedSaleResult.ResponseCode + "<br/>";
+                errorMsg += "status_message : " + keyedSaleResult.StatusMessage + "<br/>";
+				errorMsg += "external_transaction_id : " + keyedSaleResult.ExternalTransactionId + "<br/>";
+				errorMsg += "masked_card_number : " + keyedSaleResult.MaskedCardNumber + "<br/>";
+				errorMsg += " API errors : " + "<br/>";
+				
+				// Check the actual API errors with appropriate code	
+				if(keyedSaleResult.TransactionErrors != null && keyedSaleResult.TransactionErrors.Any())
+				{		
+					foreach (var item in keyedSaleResult.TransactionErrors)
 					{
-						Debug.WriteLine(item.Key + "=" + errorMessage + "<br/>");
+						// to read Error message with each error code in array.
+						foreach (var errorMessage in (string[])item.Value)
+						{
+							errorMsg += item.Key + "=" + errorMessage + "<br/>";
+						}
 					}
 				}
-				Debug.WriteLine("Keyed sale: " + "Failed!" + "<br />");
-
+				return new PaymentResult(Attempt<IPayment>.Fail(payment, new Exception(errorMsg)), invoice, false);
 			}
 			else
 			{				
@@ -163,8 +169,8 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 					
 					// TODO Constants file
 					// TODO Set via validation method (containsKey, null check, etc...)
-					payment.ExtendedData.SetValue("access_token", paytraceTokenResult.AccessToken); // or from args collection?
-					payment.ExtendedData.SetValue("token_type", paytraceTokenResult.TokenType);
+					payment.ExtendedData.SetValue("access_token", token); // or from args collection?
+					//payment.ExtendedData.SetValue("token_type", paytraceTokenResult.TokenType); // Probably not concerned with this value
 					payment.ExtendedData.SetValue("response_code", keyedSaleResult.ResponseCode.ToString());
 					payment.ExtendedData.SetValue("transaction_id", keyedSaleResult.TransactionId.ToString());
 					payment.ExtendedData.SetValue("approval_code", keyedSaleResult.ApprovalCode);
@@ -189,18 +195,15 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 				{
 					// Do your code here based on the response_code - use the PayTrace http status and error page for reference
 					// Do your code for any additional verification - avs_response and csc_response
+										
 
-					//Display Response
-					//DisplaySaleResponse(result);
-					Debug.WriteLine("Error : " + keyedSaleResult.HttpErrorMessage + "<br/>");
-
+					string errorMsg = "Error : " + keyedSaleResult.HttpErrorMessage + "<br/>";
+					return new PaymentResult(Attempt<IPayment>.Fail(payment, new Exception(errorMsg)), invoice, false);
 				}
 
 				// Do your code for any additional task(s)
 			}
-
-			throw new NotImplementedException();
-
+			
 			// S6 Merchello Demo PO code, not for production
 			//var payment = GatewayProviderService.CreatePayment(PaymentMethodType.PurchaseOrder, amount, PaymentMethod.Key);
 			//payment.CustomerKey = invoice.CustomerKey;
@@ -227,7 +230,7 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 		}
 
 		#region PayTrace Specific Methods
-		
+
 		//public void BuildTransaction(string oAuth)
 		//{
 		//	// Key Sale Request
@@ -237,37 +240,24 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 		//	KeyedSaleGenerator keyedSaleGenerator = new KeyedSaleGenerator();
 
 		//	// Assign the values to the key Sale Request.
-		//	requestKeyedSale = BuildRequestFromFields(requestKeyedSale);
+		//	requestKeyedSale = PopulateRequestData(requestKeyedSale);
 
 		//	// To make Keyed Sale Request and store the response
 		//	var result = keyedSaleGenerator.KeyedSaleTrans(oAuth, requestKeyedSale);
-						
+
 		//	HandleKeyedSaleResult(result);
 
 		//}
 
-		protected KeyedSaleRequest BuildRequestFromFields(KeyedSaleRequest requestKeyedSale)
+		protected KeyedSaleRequest PopulateRequestData(KeyedSaleRequest requestKeyedSale, ProcessorArgumentCollection args)
 		{
-			// TODO Build Keyed Sale Request fields from the input source
-			// requestKeyedSale.InvoiceId = 
+			requestKeyedSale.Amount = double.Parse(ArgValue(Constants.PayTrace.ProcessorArgumentsKeys.Amount, args));
+			// Note: If grouping doesn't preserve encryption each property can be mapped directl
+			requestKeyedSale.ObjCreditCard = JsonConvert.DeserializeObject<PayTraceCreditCard>(ArgValue(Constants.PayTrace.ProcessorArgumentsKeys.PayTraceCreditCard, args));
+			requestKeyedSale.ObjBillingAddress = JsonConvert.DeserializeObject<PayTraceBillingAddress>(ArgValue(Constants.PayTrace.ProcessorArgumentsKeys.PayTraceBillingAddress, args));
+			requestKeyedSale.Csc = ArgValue(Constants.PayTrace.ProcessorArgumentsKeys.EncryptedCreditCardCode, args);
+			// TODO requestKeyedSale.integrator_id is required according to documentation?
 
-			requestKeyedSale.Amount = 2.50;
-
-			requestKeyedSale.ObjCreditCard = new CreditCard();
-			requestKeyedSale.ObjCreditCard.CcNumber = "4111111111111111";
-			requestKeyedSale.ObjCreditCard.ExpirationMonth = "12";
-			requestKeyedSale.ObjCreditCard.ExpirationYear = "2020";
-			//requestKeyedSale.credit_card.expiration_month = "13";
-			//requestKeyedSale.credit_card.expiration_year = "2011";
-			requestKeyedSale.Csc = "999";
-
-			requestKeyedSale.ObjBillingAddress = new BillingAddress();
-			requestKeyedSale.ObjBillingAddress.Name = "Steve Smith";
-			requestKeyedSale.ObjBillingAddress.StreetAddress = "8320 E. West St.";
-			requestKeyedSale.ObjBillingAddress.City = "Spokane";
-			requestKeyedSale.ObjBillingAddress.State = "WA";
-			requestKeyedSale.ObjBillingAddress.Zip = "85284";
-			
 			return requestKeyedSale;
 
 		}
@@ -388,6 +378,11 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 			//GatewayProviderService.Save(payment);
 
 			//return new PaymentResult(Attempt<IPayment>.Succeed(payment), invoice, false);
+		}
+
+		private string ArgValue(string propertyName, ProcessorArgumentCollection args)
+		{
+			return args.ContainsKey(propertyName) ? args[propertyName] : string.Empty;
 		}
 	}
 }

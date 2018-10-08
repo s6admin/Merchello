@@ -9,5 +9,6 @@
         // Constants-AuthorizeNet.cs
         // Constants-Braintree.cs
         // Constants-PayPal.cs
+		// Constants-PayTrace.cs
     }
 }

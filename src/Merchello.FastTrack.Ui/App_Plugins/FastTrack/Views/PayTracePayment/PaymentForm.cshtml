@@ -1,0 +1,112 @@
+﻿@inherits Umbraco.Web.Mvc.UmbracoViewPage<Merchello.Web.Store.Models.PayTraceEncryptedPaymentModel>
+@*@model Merchello.FastTrack.Models.Payment.PayTraceEncryptedPaymentModel*@
+
+@using System.Web.Mvc.Html
+@using Merchello.FastTrack.Controllers.Payment;
+@using Merchello.FastTrack.Ui
+@using Merchello.Web.Models.Ui
+@using ClientDependency.Core;
+@using ClientDependency.Core.Mvc;
+
+@* S6 PayTrace JS Front-end provider, not for use with Redirect provider *@
+
+@{
+
+	// PayTrace payment method requires a client-side encryption library
+	Html.RequiresJs(new JavascriptFile("https://api.paytrace.com/assets/e2ee/paytrace-e2ee.js") { ForceProvider = "HeadJS" });
+
+	//Model.SuccessRedirectUrl = ExampleUiHelper.Content.GetReceipt().Url;
+	string encrypt = "pt-encrypt"; // "pt-encrypt" class is the binder for sensitive data fields
+	string formId = "pt-form";
+
+	@* PayTrace Test Data
+		https://developers.paytrace.com/support/home#Credit_Card_Schema
+	*@
+
+	if (Model.CreditCard == null)
+	{
+		Model.CreditCard = new Merchello.Web.Store.Models.PayTraceCreditCard();
+	}
+	Model.CreditCard.CcNumberEncrypted = "4012000098765439"; // 4012... Approval
+	Model.CreditCard.ExpireMonth = "12"; // Any works
+	Model.CreditCard.ExpireYear = "2020"; // Any works
+	Model.CcCscEncrypted = "999"; // 999 Approval
+}
+
+<h3 class="subheader">Credit Card</h3>
+
+@*
+	PayTrace
+	This script tag binds the form's submit event
+	Do this first, or wrap in a try/catch to ensure the form is never un-hooked
+	Then set the key from an AJAX call
+*@
+<script>
+        $(document).ready(function() {
+			paytrace.hookFormSubmit('#@formId');
+        	paytrace.setKeyAjax('/smo_dev_public_key.pem');
+        });
+</script>
+
+@* TODO Typically form is server bound but PayTrace front-end encryption means we might use an Ajax form or not specify a server-bind at all (like BrainTreeStandardCC does)*@
+@using (Html.BeginUmbracoForm<PayTracePaymentController>("Process", new { area = "FastTrack" }, new { @id = @formId, @data_muiscript = "paytrace-encrypted" }))
+{
+	@*<form id="@formId">*@
+
+	@* Remove AntiForgeryToken if using PayTrace client-side library? *@
+	@Html.AntiForgeryToken()
+
+	@*@Html.HiddenFor(x => x.CreditCard)*@ @* Billing Address details should be used from checkout submission *@
+	@*@Html.HiddenFor(x => x.Amount)*@ @* Don't persist Amount, it should always come from the server *@
+	@*@Html.HiddenFor(x => x.OrderNumber)*@
+
+	@* Debug Address Values, not for production *@
+if (Model.BillingAddress != null)
+{
+	@Html.LabelFor(x => x.BillingAddress)
+	@Html.TextBoxFor(x => x.BillingAddress)
+	@Html.TextBoxFor(x => x.BillingAddress.StreetAddress)
+}
+
+	@*<div class="form-group">
+			<label class="control-label">Order Number</label>
+			@Html.TextBoxFor(x => x.OrderNumber, new { @class = "form-control" })
+			@Html.ValidationMessageFor(x => x.OrderNumber)
+		</div>*@
+
+	<div class="form-group">
+		<label class="control-label">Credit Card Number</label>
+		@Html.TextBoxFor(x => x.CreditCard.CcNumberEncrypted, new { @class = "form-control " + encrypt })
+		@Html.ValidationMessageFor(x => x.CreditCard.CcNumberEncrypted)
+	</div>
+	<div class="row">
+		<div class="col-xs-4">
+			<div class="form-group">
+				<label class="control-label">CSC Code</label>
+				@Html.TextBoxFor(x => x.CcCscEncrypted, new { @class = "form-control " + encrypt })
+				@Html.ValidationMessageFor(x => x.CcCscEncrypted)
+			</div>
+		</div>
+		<div class="col-xs-4">
+			<div class="form-group">
+				<label class="control-label">Month</label>
+				@Html.TextBoxFor(x => x.CreditCard.ExpireMonth, new { @class = "form-control " })
+				@Html.ValidationMessageFor(x => x.CreditCard.ExpireMonth)
+			</div>
+		</div>
+		<div class="col-xs-4">
+			<div class="form-group">
+				<label class="control-label">Year</label>
+				@Html.TextBoxFor(x => x.CreditCard.ExpireYear, new { @class = "form-control " })
+				@Html.ValidationMessageFor(x => x.CreditCard.ExpireYear)
+			</div>
+		</div>
+	</div>
+
+
+		@*<a href="@ExampleUiHelper.CheckoutWorkflow.GetPageForStage(CheckoutStage.PaymentMethod).Url" class="btn btn-default">Back</a>*@
+		@Html.Partial("_RequireJsSubmitBtn", Model)
+		@*</form>*@
+
+
+}

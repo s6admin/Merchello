@@ -295,7 +295,6 @@
     <Compile Include="Models\Membership\LoginModel.cs" />
     <Compile Include="Models\Membership\NewMemberModel.cs" />
     <Compile Include="Models\Payment\FastTrackPaymentModel.cs" />
-    <Compile Include="Models\Payment\PayTracePaymentModel.cs" />
     <Compile Include="Models\Payment\PurchaseOrderPaymentModel.cs" />
     <Compile Include="PackageActions\AddConfigSection.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

@@ -36,7 +36,7 @@ namespace Merchello.Providers
 		public OAuthError ObjError { get; set; }
 
 		// Optional - flag for error 
-		public Boolean ErrorFlag { get; set;}
+		public Boolean ErrorFlag { get; set; }
 
 	}
 

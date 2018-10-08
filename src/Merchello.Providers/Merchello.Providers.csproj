@@ -282,6 +282,7 @@
       <DependentUpon>AutoMapperMappings.cs</DependentUpon>
     </Compile>
     <Compile Include="Caching\CacheKeys.cs" />
+    <Compile Include="Constants-PayTrace.cs" />
     <Compile Include="Constants-PurchaseOrder.cs">
       <DependentUpon>Constants.cs</DependentUpon>
     </Compile>

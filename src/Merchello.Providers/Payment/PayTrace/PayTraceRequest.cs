@@ -89,24 +89,26 @@ namespace Merchello.Providers
     /// <summary>
     /// Class for credit card
     /// </summary>
-    public class CreditCard  
+    public class PayTraceCreditCard  
 	{
 
         // Declare 'encrypted_number' instead of 'number' in case of using PayTrace Client-Side Encryption JavaScript Library.
-        [JsonProperty("number")]
+        [JsonProperty("encrypted_number")]
         public string CcNumber { get; set; }
 
+		// S6 Note, month cannot be encrypted
         [JsonProperty("expiration_month")]
         public string ExpirationMonth { get; set; }
 
-        [JsonProperty("expiration_year")]
+		// S6 Note, year cannot be encrypted
+		[JsonProperty("expiration_year")]
         public string ExpirationYear { get; set; }
 	}
 
     /// <summary>
     /// Class for billing address
     /// </summary>
-    public class BillingAddress 
+    public class PayTraceBillingAddress 
 	{
         [JsonProperty("name")]
         public string Name { get; set; }
@@ -134,14 +136,14 @@ namespace Merchello.Providers
         public double Amount { get; set; }
 
         [JsonProperty("credit_card")]
-        public CreditCard ObjCreditCard { get; set; }
-        // Declare 'encrypted_csc' instead of 'csc' in case of using PayTrace Client-Side Encryption JavaScript Library.
-
-        [JsonProperty("csc")]
+        public PayTraceCreditCard ObjCreditCard { get; set; }
+        
+		// Declare 'encrypted_csc' instead of 'csc' in case of using PayTrace Client-Side Encryption JavaScript Library.
+        [JsonProperty("encrypted_csc")]
         public string Csc { get; set; }
 
         [JsonProperty("billing_address")]
-        public BillingAddress ObjBillingAddress { get; set; }
+        public PayTraceBillingAddress ObjBillingAddress { get; set; }
 				
 		[JsonProperty("invoice_id")]
 		public string InvoiceId { get; set; }
@@ -174,14 +176,14 @@ namespace Merchello.Providers
         public double Amount { get; set; }
 
         [JsonProperty("credit_card")]
-        public CreditCard ObjCreditCard { get; set; }
+        public PayTraceCreditCard ObjCreditCard { get; set; }
         // Declare 'encrypted_csc' instead of 'csc' in case of using PayTrace Client-Side Encryption JavaScript Library.
 
         [JsonProperty("csc")]
         public string Csc { get; set; }
 
         [JsonProperty("billing_address")]
-        public BillingAddress ObjBillingAddress { get; set; }
+        public PayTraceBillingAddress ObjBillingAddress { get; set; }
 
 		[JsonProperty("invoice_id")]
 		public string InvoiceId { get; set; }
@@ -231,10 +233,10 @@ namespace Merchello.Providers
         public string CustomerId { get; set; }
 
         [JsonProperty("credit_card")]
-        public CreditCard ObjCreditCard { get; set; }
+        public PayTraceCreditCard ObjCreditCard { get; set; }
 
         [JsonProperty("billing_address")]
-        public BillingAddress ObjBillingAddress { get; set; }
+        public PayTraceBillingAddress ObjBillingAddress { get; set; }
 		
         /// <summary>
 		/// This Discretionary_data object is optionl - declare it in case you have discretionary data requiered for the customer

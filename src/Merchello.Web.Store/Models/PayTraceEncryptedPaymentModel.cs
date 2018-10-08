@@ -1,26 +1,34 @@
 ﻿
-namespace Merchello.FastTrack.Models.Payment
+namespace Merchello.Web.Store.Models
 {
 	using Newtonsoft.Json;
 	using System.ComponentModel;
 	using System.ComponentModel.DataAnnotations;
 
-	// S6 Demo for standard purchase order payment provider, not used with redirect PayTrace
+	// Payment model to be used with the front-end PayTrace Encrypted Javascript library
+	// This closely resembles the PayTraceCreditCardModel in Merchello.Providers which was based on the original PayTrace .NET API examples
 
-	public class PayTracePaymentModel : FastTrackPaymentModel
+	public class PayTraceEncryptedPaymentModel : StorePaymentModel
 	{
-				
+
+		public string PayTraceToken { get; set; }
+
 		[Required]
 		[JsonProperty("amount")]
-		public double amount { get; set; }
-				
+		public double Amount { get; set; }
+
 		[Required]
 		[JsonProperty("invoice_id")]
 		public string OrderNumber { get; set; }
 
 		[Required]
 		[JsonProperty("credit_card")]
-		public PayTraceCreditCard CreditCard {get; set; }		
+		public PayTraceCreditCard CreditCard { get; set; }
+
+		// S6 Note that CSC is external to the CreditCard object data
+		[Required]
+		[JsonProperty("encrypted_csc")]
+		public string CcCscEncrypted { get; set; }
 
 		[Required]
 		[JsonProperty("billing_address")]
@@ -31,12 +39,8 @@ namespace Merchello.FastTrack.Models.Payment
 	{
 		[Required]
 		[JsonProperty("encrypted_number")]
-		public string CcNumber { get; set; }
-
-		[Required]
-		[JsonProperty("encrypted_csc")]
-		public string CcCsc { get; set; }
-
+		public string CcNumberEncrypted { get; set; }
+		
 		[Required]
 		[JsonProperty("expiration_month")]
 		public string ExpireMonth { get; set; }
@@ -74,6 +78,6 @@ namespace Merchello.FastTrack.Models.Payment
 		// 2 digit country code
 		// http://en.wikipedia.org/wiki/ISO_3166-2
 		[JsonProperty("country")]
-		public string country { get; set; }
+		public string Country { get; set; }
 	}
 }
