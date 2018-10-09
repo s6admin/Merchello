@@ -12,6 +12,8 @@
 
 @{
 
+	Model.SuccessRedirectUrl = ExampleUiHelper.Content.GetReceipt().Url;
+
 	// PayTrace payment method requires a client-side encryption library
 	Html.RequiresJs(new JavascriptFile("https://api.paytrace.com/assets/e2ee/paytrace-e2ee.js") { ForceProvider = "HeadJS" });
 
@@ -23,14 +25,14 @@
 		https://developers.paytrace.com/support/home#Credit_Card_Schema
 	*@
 
-	if (Model.CreditCard == null)
-	{
-		Model.CreditCard = new Merchello.Web.Store.Models.PayTraceCreditCard();
-	}
-	Model.CreditCard.CcNumberEncrypted = "4012000098765439"; // 4012... Approval
-	Model.CreditCard.ExpireMonth = "12"; // Any works
-	Model.CreditCard.ExpireYear = "2020"; // Any works
-	Model.CcCscEncrypted = "999"; // 999 Approval
+if (Model.CreditCard == null)
+{
+	Model.CreditCard = new Merchello.Web.Store.Models.PayTraceCreditCard();
+}
+Model.CreditCard.CcNumberEncrypted = "4012000098765439"; // 4012... Approval
+Model.CreditCard.ExpireMonth = "12"; // Any works
+Model.CreditCard.ExpireYear = "2020"; // Any works
+Model.CcCscEncrypted = "999"; // 999 Approval
 }
 
 <h3 class="subheader">Credit Card</h3>
@@ -48,17 +50,11 @@
         });
 </script>
 
-@* TODO Typically form is server bound but PayTrace front-end encryption means we might use an Ajax form or not specify a server-bind at all (like BrainTreeStandardCC does)*@
 @using (Html.BeginUmbracoForm<PayTracePaymentController>("Process", new { area = "FastTrack" }, new { @id = @formId, @data_muiscript = "paytrace-encrypted" }))
 {
-	@*<form id="@formId">*@
 
-	@* Remove AntiForgeryToken if using PayTrace client-side library? *@
 	@Html.AntiForgeryToken()
-
-	@*@Html.HiddenFor(x => x.CreditCard)*@ @* Billing Address details should be used from checkout submission *@
-	@*@Html.HiddenFor(x => x.Amount)*@ @* Don't persist Amount, it should always come from the server *@
-	@*@Html.HiddenFor(x => x.OrderNumber)*@
+	@Html.HiddenFor(x => x.SuccessRedirectUrl)
 
 	@* Debug Address Values, not for production *@
 if (Model.BillingAddress != null)
@@ -103,10 +99,7 @@ if (Model.BillingAddress != null)
 		</div>
 	</div>
 
-
 		@*<a href="@ExampleUiHelper.CheckoutWorkflow.GetPageForStage(CheckoutStage.PaymentMethod).Url" class="btn btn-default">Back</a>*@
 		@Html.Partial("_RequireJsSubmitBtn", Model)
-		@*</form>*@
-
 
 }

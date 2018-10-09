@@ -13,6 +13,11 @@ namespace Merchello.Web.Store.Models
 
 		public string PayTraceToken { get; set; }
 
+		/// <summary>
+		/// Gets or sets the success redirect url.
+		/// </summary>
+		public string SuccessRedirectUrl { get; set; }
+
 		[Required]
 		[JsonProperty("amount")]
 		public double Amount { get; set; }

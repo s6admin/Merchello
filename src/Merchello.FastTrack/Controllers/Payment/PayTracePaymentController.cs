@@ -127,7 +127,7 @@ namespace Merchello.FastTrack.Controllers.Payment
 				var resultModel = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod, attempt); // This Create adds extra details to the View based on the success/failure of the payment attempt
 
 				// merge the models so we can be assured that any hidden values are passed on
-				//model.ViewData = resultModel.ViewData;
+				model.ViewData = resultModel.ViewData;
 
 				// S6 Removed. TODO This fails because "view" is not set...causes customer-facing InvalidCheckoutStage error
 				//HandleNotificiation(model, attempt);
@@ -172,7 +172,7 @@ namespace Merchello.FastTrack.Controllers.Payment
 		protected override ActionResult HandlePaymentSuccess(PayTraceEncryptedPaymentModel model)
 		{
 			// Set the invoice key in the customer context (cookie)
-			if (model.ViewData.Success)
+			if (model.ViewData != null && model.ViewData.Success)
 			{
 				CustomerContext.SetValue("invoiceKey", model.ViewData.InvoiceKey.ToString());
 			}
@@ -183,12 +183,10 @@ namespace Merchello.FastTrack.Controllers.Payment
 
 				return json;
 			}
-
-			return base.HandlePaymentSuccess(model);
-
-			//return model.ViewData.Success && !model.SuccessRedirectUrl.IsNullOrWhiteSpace() ?
-			//	Redirect(model.SuccessRedirectUrl) :
-			//	base.HandlePaymentSuccess(model);
+			
+			return model.ViewData.Success && !model.SuccessRedirectUrl.IsNullOrWhiteSpace() ?
+				Redirect(model.SuccessRedirectUrl) :
+				base.HandlePaymentSuccess(model);
 		}
 
 
