@@ -19,7 +19,8 @@ namespace Merchello.FastTrack.Controllers.Payment
 	using Web.Store.Factories;
 	using Web.Factories;
 	using Umbraco.Core.Logging;
-	
+	using Core.Logging;
+
 	// S6 This is for the front-end encryption PayTrace provider, not the redirect provider
 
 	[PluginController("FastTrack")]
@@ -52,14 +53,13 @@ namespace Merchello.FastTrack.Controllers.Payment
 
 			// Set any eComm or CMS properties we don't want to scope into the PayTrace Factory
 
-			IInvoice invoice = this.CheckoutManager.Payment.PrepareInvoice();
-
-			if(invoice != null)
+			// Preparing the invoice saves and generates a key. This should only be done once per checkout unless the basket is invalidated
+			IInvoice invoice = PrepareInvoiceOnce();
+			if (invoice != null)
 			{
-				model.Amount = decimal.ToDouble(invoice.Total); 
+				model.Amount = decimal.ToDouble(invoice.Total);
+				//model.OrderNumber = invoice.PoNumber;
 			}
-						
-			//model.OrderNumber = invoice.PoNumber; // TODO Do we have an Invoice Order Number set by this time in checkout? It is optional for PayTrace so we shouldn't force creating one here if eComm naturally establishes one after the payment result has been received
 
 			return view.IsNullOrWhiteSpace() ? this.PartialView(model) : this.PartialView(view, model);
 		}
@@ -106,14 +106,16 @@ namespace Merchello.FastTrack.Controllers.Payment
 				}
 
 				#endregion
-
+				
 				// Re-get any needed model values that aren't persisted in the paytrace paymentform
 				var paymentMethod = this.CheckoutManager.Payment.GetPaymentMethod();
 
-				IInvoice invoice = this.CheckoutManager.Payment.PrepareInvoice();
+				IInvoice invoice = PrepareInvoiceOnce();
+				
 				if (invoice != null)
 				{
 					model.Amount = decimal.ToDouble(invoice.Total);
+					model.TaxAmount = invoice.TotalTax();
 				}
 
 				var getModelForBilling = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod);
@@ -121,7 +123,7 @@ namespace Merchello.FastTrack.Controllers.Payment
 				{
 					model.BillingAddress = getModelForBilling.BillingAddress;
 				}				
-
+				
 				var attempt = ProcessPayment(model);
 								
 				var resultModel = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod, attempt); // This Create adds extra details to the View based on the success/failure of the payment attempt
@@ -129,10 +131,29 @@ namespace Merchello.FastTrack.Controllers.Payment
 				// merge the models so we can be assured that any hidden values are passed on
 				model.ViewData = resultModel.ViewData;
 
-				// S6 Removed. TODO This fails because "view" is not set...causes customer-facing InvalidCheckoutStage error
-				//HandleNotificiation(model, attempt);
+				// Set the invoice key in the customer context (cookie) S6 Moved up from Success payment otherwise failed payment attempts will create multiple invoices
+				if (model.ViewData != null && !model.ViewData.InvoiceKey.Equals(Guid.Empty))
+				{
+					CustomerContext.SetValue("invoiceKey", model.ViewData.InvoiceKey.ToString()); // Appears as "merchCustCtxinvoiceKey"
+				}
+
+				if (attempt.Payment.Success)
+				{
+					
+					// S6 Removed. TODO This fails because "view" is not set...causes customer-facing InvalidCheckoutStage error
+					//HandleNotificiation(model, attempt);
+
+					return this.HandlePaymentSuccess(model);
+				} else
+				{
+
+					// S6 Removed. TODO This fails because "view" is not set...causes customer-facing InvalidCheckoutStage error
+					//HandleNotificiation(model, attempt);
+
+					return this.HandlePaymentException(model, attempt.Payment.Exception);
+				}
+							
 				
-				return this.HandlePaymentSuccess(model);
 			}
 			catch (Exception ex)
 			{
@@ -140,17 +161,50 @@ namespace Merchello.FastTrack.Controllers.Payment
 			}
 		}
 
+		// Special method for ensuring an invoice is only prepared once during the PaymentForm and/or Process checkout since we allow multiple payment attempts in case of gateway failure(s)
+		private IInvoice PrepareInvoiceOnce()
+		{
+			IInvoice invoice = null;
+            Guid invoiceKey = Guid.Empty;
+
+			// Check for an invoice key in customer context so duplicate invoices aren't created (ie.) during payment failures
+			try
+			{
+				invoiceKey = new Guid(CustomerContext.GetValue("invoiceKey"));
+			}
+			catch (Exception ex)
+			{
+
+			}
+			if (invoiceKey.Equals(Guid.Empty))
+			{
+				// Prepare invoice for initial payment attempt
+				invoice = this.CheckoutManager.Payment.PrepareInvoice();
+			}
+			else
+			{
+				/* 
+					An invoice key is already present in customer context which means a previous payment attempt was made and failed
+					In this case we want to retrieve the existing invoice, not create duplicates for each payment attempt					
+				*/
+				invoice = CheckoutManager.Context.Services.InvoiceService.GetByKey(invoiceKey);
+			}
+
+			return invoice;
+		}
+
 		protected virtual IPaymentResult ProcessPayment(PayTraceEncryptedPaymentModel model, IInvoice invoice = null)
 		{
 			
 			var paymentMethod = CheckoutManager.Payment.GetPaymentMethod();
-
+			
 			// Create the processor argument collection, where we'll pass in the purchase order
 			var args = new ProcessorArgumentCollection();			
 			args.Add("access_token", model.PayTraceToken);
 			args.Add(MC.PayTrace.ProcessorArgumentsKeys.PayTraceCreditCard, JsonConvert.SerializeObject(model.CreditCard));
 			args.Add(MC.PayTrace.ProcessorArgumentsKeys.PayTraceBillingAddress, JsonConvert.SerializeObject(model.BillingAddress));
-			args.Add(MC.PayTrace.ProcessorArgumentsKeys.Amount, model.Amount.ToString());
+			args.Add(MC.PayTrace.ProcessorArgumentsKeys.Amount, model.Amount.ToString()); // Amount includes FINAL cost including tax. Tax amount (below) is only the tax line item amount
+			args.Add(MC.PayTrace.ProcessorArgumentsKeys.TaxAmount, model.TaxAmount.ToString());
 			args.Add(MC.PayTrace.ProcessorArgumentsKeys.EncryptedCreditCardCode, model.CcCscEncrypted);
 			//args.Add(MC.PayTrace.ProcessorArgumentsKeys.EncryptedCreditCardNumber, model.CreditCard.CcNumberEncrypted);
 			//args.Add(MC.PayTrace.ProcessorArgumentsKeys.City)
@@ -171,6 +225,7 @@ namespace Merchello.FastTrack.Controllers.Payment
 		/// </returns>
 		protected override ActionResult HandlePaymentSuccess(PayTraceEncryptedPaymentModel model)
 		{
+			
 			// Set the invoice key in the customer context (cookie)
 			if (model.ViewData != null && model.ViewData.Success)
 			{
@@ -183,7 +238,13 @@ namespace Merchello.FastTrack.Controllers.Payment
 
 				return json;
 			}
-			
+
+			// Remove any previously-saved failed payment attempts if one actually does succeed			
+			if (CheckoutManager.Customer.Context.Customer.ExtendedData.ContainsKey(MC.PayTrace.ExtendedDataKeys.FailedAttempts))
+			{
+				CheckoutManager.Customer.Context.Customer.ExtendedData.RemoveValue(MC.PayTrace.ExtendedDataKeys.FailedAttempts);
+			}
+
 			return model.ViewData.Success && !model.SuccessRedirectUrl.IsNullOrWhiteSpace() ?
 				Redirect(model.SuccessRedirectUrl) :
 				base.HandlePaymentSuccess(model);
@@ -192,15 +253,57 @@ namespace Merchello.FastTrack.Controllers.Payment
 
 		protected override ActionResult HandlePaymentException(PayTraceEncryptedPaymentModel model, Exception ex)
 		{
-
-			// TODO Any custom steps required to handle PayTrace integration and/or Customer experience
-
-			// Reset any credit card values so they are not pre-populated into the form if an error occurs
+			
+			// Reset any credit card values so they are not pre-populated into the form if an error occurs (customers will need to re-enter their details for security purposes)			
+			ModelState.Remove("CreditCard.ExpireMonth");
+			ModelState.Remove("CreditCard.ExpireYear");
+			ModelState.Remove("CreditCard.CcNumberEncrypted");
 			model.CreditCard = new Merchello.Web.Store.Models.PayTraceCreditCard();
+						
+			ModelState.Remove("CcCscEncrypted");
+			model.CcCscEncrypted = string.Empty;
 
-			return base.HandlePaymentException(model, ex);
+			// Keep track of the failed attempts in the Customer data so the next checkout step is aware of the payment failure(s)
+			int attempts = 1;
+			ExtendedDataCollection ed = CheckoutManager.Customer.Context.Customer.ExtendedData;
+						
+			// Retrieve previous saved value if it exists
+			if (ed.ContainsKey(MC.PayTrace.ExtendedDataKeys.FailedAttempts))
+			{
+				int.TryParse(ed.GetValue(MC.PayTrace.ExtendedDataKeys.FailedAttempts), out attempts); // Retrieve previous value
+				attempts = attempts + 1; // Increment previous value				
+			}
+
+			ed.SetValue(MC.PayTrace.ExtendedDataKeys.FailedAttempts, attempts.ToString());
+			ViewData[MC.PayTrace.ExtendedDataKeys.FailedAttempts] = attempts;
+						
+			LogHelper.Error(typeof(PayTracePaymentController), "Failed payment operation. Number of Attempts: " + attempts, ex);
+			
+			if (attempts > 2)
+			{
+				// After a certain number of failed attempts, submit order but do not record payment. notify customer their card has failed or been declined and that further action will be required to finalize their purchase
+				CustomerContext.SetValue("invoiceKey", model.ViewData.InvoiceKey.ToString());
+
+				// Keep FailedAttempts in CheckoutManager until receipt page so a proper message can be displayed to the user
+				// Remove failed attempts data so it doesn't affect future orders
+				//if (CheckoutManager.Customer.Context.Customer.ExtendedData.ContainsKey(MC.PayTrace.ExtendedDataKeys.FailedAttempts))
+				//{
+				//	CheckoutManager.Customer.Context.Customer.ExtendedData.RemoveValue(MC.PayTrace.ExtendedDataKeys.FailedAttempts);
+				//}
+
+				return !model.SuccessRedirectUrl.IsNullOrWhiteSpace() ? 
+					Redirect(model.SuccessRedirectUrl) : 
+					base.HandlePaymentSuccess(model);
+            } else
+			{
+				// Return to payment form and allow customer to resubmit their payment details
+				return CurrentUmbracoPage();								
+			}						
+			
+			// base.handlepaymentexception logs error and throws hard exception which isn't desired in this case. allow customer order to be sent but notify them payment has been declined
+			//return base.HandlePaymentException(model, ex);
 		}
-
+				
 		/// <summary>
 		/// Gets the <see cref="PaymentResultAsyncResponse"/> for the model.
 		/// </summary>

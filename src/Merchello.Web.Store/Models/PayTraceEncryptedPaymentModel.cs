@@ -38,6 +38,27 @@ namespace Merchello.Web.Store.Models
 		[Required]
 		[JsonProperty("billing_address")]
 		public PayTraceBillingAddress BillingAddress { get; set; }
+
+		// TaxAmount is an OPTIONAL property to PayTrace, but we always want to ensure it is set in our orders
+		[Required]
+		[JsonProperty("tax_amount")]
+		public decimal TaxAmount { get; set; }
+
+		[JsonProperty("email")]
+		public string CustomerEmail { get; set; }
+
+		//[JsonProperty("submit_failed_payment_orders")]
+		//public bool SubmitFailedPaymentOrders { get; set; }
+
+		//// Permit a certain number of failed payment provider attempts before submitting the order without payment. Only applicable if SubmitFailedPaymentOrders is set to True		
+		//private int maxFailedAttempts = 2;
+		//[JsonProperty("max_failed_attempts")]
+		//public int MaxFailedAttempts
+		//{
+		//	get { return maxFailedAttempts; }
+		//	set { maxFailedAttempts = value; }
+		//}
+
 	}
 
 	public class PayTraceCreditCard

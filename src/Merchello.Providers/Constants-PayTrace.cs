@@ -55,6 +55,11 @@ namespace Merchello.Providers
 				/// The pay pal  transaction key.
 				/// </summary>
 				public const string PayTraceTransaction = "PayTracetransaction";
+
+				/// <summary>
+				/// A counter for keeping track of failed payment attempts. This is for website use only and is not an official PayTrace property.
+				/// </summary>
+				public const string FailedAttempts = "FailedPayTracePaymentAttempts";
 			}
 
 			/// <summary>
@@ -143,7 +148,7 @@ namespace Merchello.Providers
 						return "billing_address";
 					}
 				}
-
+								
 				public static string EncryptedCreditCardNumber
 				{
 					get
@@ -176,7 +181,13 @@ namespace Merchello.Providers
 					}
 				}
 
-				public static string Name
+				/// <summary>
+				/// The Billing Address Name.
+				/// </summary>
+				/// <value>
+				/// The name.
+				/// </value>
+				public static string BillingAddressName
 				{
 					get
 					{
@@ -232,12 +243,26 @@ namespace Merchello.Providers
 					}
 				}
 
+				/// <summary>
+				/// The TOTAL transaction Amount, including any taxes, shipping costs, and/or additional fees.
+				/// </summary>
+				/// <value>
+				/// The amount.
+				/// </value>
 				public static string Amount
 				{
 					get
 					{
 						return "amount";
 					}
+				}
+
+				public static string TaxAmount
+				{
+					get {
+						return "tax_amount";
+					}
+
 				}
 			}
 

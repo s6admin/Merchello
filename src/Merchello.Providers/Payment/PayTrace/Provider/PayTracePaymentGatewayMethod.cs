@@ -10,6 +10,7 @@ using Merchello.Providers.Payment.PurchaseOrder;
 using Merchello.Providers;
 using System.Diagnostics;
 using Newtonsoft.Json;
+using static Merchello.Providers.Constants.PayTrace;
 
 namespace Merchello.Providers.Payment.PayTrace.Provider
 {
@@ -85,40 +86,12 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 		/// <returns>The <see cref="IPaymentResult"/></returns>
 		protected override IPaymentResult PerformAuthorizeCapturePayment(IInvoice invoice, decimal amount, ProcessorArgumentCollection args)
 		{
-			/* 
-				TODO 
-				We already generate a token in the controller.Process method. Should it remain there or here (passed as an args property or create directly)?
-				It isn't used for any purpose in Process other than to prevent the ProcessPayment attempt, which ultimately leads here, maybe creates some extra eComm steps...
-			*/
-			//PayTraceOAuthTokenGenerator tokenGenerator = new PayTraceOAuthTokenGenerator();
-			//var paytraceTokenResult = tokenGenerator.GetToken();
-		
-			//// Determine whether OAuthToken is successful and make a request
-			//if (paytraceTokenResult.ErrorFlag != false)
-			//{
-			//	string errorMsg = "Could not authenticate token with PayTrace for Invoice " + invoice.PoNumber;
-			//	if(paytraceTokenResult.ObjError != null)
-			//	{
-			//		errorMsg += paytraceTokenResult.ObjError.Error ?? string.Empty;
-			//		errorMsg += paytraceTokenResult.ObjError.ErrorDescription ?? string.Empty;
-			//		errorMsg += paytraceTokenResult.ObjError.HttpTokenError ?? string.Empty;
-			//	}
-
-			//return new PaymentResult(Attempt<IPayment>.Fail(new Exception(errorMsg)), invoice, false);
-			//}
-
-			// If PayTrace token is retrieved without errors, continue attempting to process payment			
-			var payment = GatewayProviderService.CreatePayment(PaymentMethodType.PurchaseOrder, amount, PaymentMethod.Key);
+						
+			var payment = GatewayProviderService.CreatePayment(PaymentMethodType.CreditCard, amount, PaymentMethod.Key);
 			payment.CustomerKey = invoice.CustomerKey;
 			payment.PaymentMethodName = PaymentMethod.Name;
 			payment.ReferenceNumber = PaymentMethod.PaymentCode + "-" + invoice.PrefixedInvoiceNumber();			
-			//var pod = args.AsPurchaseOrderFormData();
 			
-			// In case of not using any OAuth2.0 Library
-			// Use following when OAuth2.0 is caseinsesitive at Paytrace. 
-			// string OAuth = String.Format ("{0} {1}", OAuthResult.token_type, OAuthResult.access_token);
-			// For now OAuth2.0  is not caseinsesitive at PayTrace - ESC-141
-
 			string token = args.ContainsKey("access_token") ? args.First(x => x.Key == "access_token").Value : string.Empty;
             string OAuth = String.Format("Bearer {0}", token); // paytraceTokenResult.AccessToken
 						
@@ -127,8 +100,7 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 			KeyedSaleGenerator keyedSaleGenerator = new KeyedSaleGenerator();
 						
 			requestKeyedSale = PopulateRequestData(requestKeyedSale, args);
-						
-			// To make Keyed Sale Request and store the response
+			
 			var keyedSaleResult = keyedSaleGenerator.KeyedSaleTrans(OAuth, requestKeyedSale);
 
 			if (keyedSaleResult != null && keyedSaleResult.HttpErrorMessage != null && keyedSaleResult.Success == false)
@@ -158,27 +130,26 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 				return new PaymentResult(Attempt<IPayment>.Fail(payment, new Exception(errorMsg)), invoice, false);
 			}
 			else
-			{				
-				// Please refer to PayTrace-HTTP Status and Error Codes page for possible errors and Response Codes
-				
+			{
+				// TODO Handle Other Response Codes: https://developers.paytrace.com/support/home#14000041297 Please refer to PayTrace-HTTP Status and Error Codes page for possible errors and Response Codes
+
 				// For transaction successfully approved 
 				if (keyedSaleResult.ResponseCode == 101 && keyedSaleResult.Success == true)
 				{
 					string successMsg = "Keyed sale: " + "Success!";
-                    Debug.WriteLine(successMsg + "<br/>");
-					
-					// TODO Constants file
-					// TODO Set via validation method (containsKey, null check, etc...)
-					payment.ExtendedData.SetValue("access_token", token); // or from args collection?
+
+					payment.ExtendedData.SetValue(ExtendedDataKeys.PayTraceTransaction, "1"); // Simply used to help identify the type of data in the payment object in the front-end website 
+					payment.ExtendedData.SetValue(ProcessorArgumentsKeys.InternalTokenKey, token);
 					//payment.ExtendedData.SetValue("token_type", paytraceTokenResult.TokenType); // Probably not concerned with this value
-					payment.ExtendedData.SetValue("response_code", keyedSaleResult.ResponseCode.ToString());
-					payment.ExtendedData.SetValue("transaction_id", keyedSaleResult.TransactionId.ToString());
-					payment.ExtendedData.SetValue("approval_code", keyedSaleResult.ApprovalCode);
-					payment.ExtendedData.SetValue("approval_message", keyedSaleResult.ApprovalMessage); // TODO Does this need to be saved?
-					payment.ExtendedData.SetValue("avs_response", keyedSaleResult.AvsResponse);
-					payment.ExtendedData.SetValue("csc_response", keyedSaleResult.CscResponse);
-					payment.ExtendedData.SetValue("external_transaction_id", keyedSaleResult.ExternalTransactionId);
-					payment.ExtendedData.SetValue("masked_card_number", keyedSaleResult.MaskedCardNumber);
+					payment.ExtendedData.SetValue(ResponseKeys.ResponseCode, keyedSaleResult.ResponseCode.ToString());
+					payment.ExtendedData.SetValue(ResponseKeys.TransactionId, keyedSaleResult.TransactionId.ToString());
+					payment.ExtendedData.SetValue(ProcessorArgumentsKeys.BillingAddressName, requestKeyedSale.ObjBillingAddress.Name);
+					payment.ExtendedData.SetValue(ResponseKeys.ApprovalCode, keyedSaleResult.ApprovalCode);
+					payment.ExtendedData.SetValue(ResponseKeys.ApprovalMessage, keyedSaleResult.ApprovalMessage.Replace("  ", " ")); // Some messages contain multiple blank spaces so collapse white-space to single before saving
+					payment.ExtendedData.SetValue(ResponseKeys.AvsResponse, keyedSaleResult.AvsResponse);
+					payment.ExtendedData.SetValue(ResponseKeys.CscResponse, keyedSaleResult.CscResponse);
+					payment.ExtendedData.SetValue(ResponseKeys.ExternalTransactionid, keyedSaleResult.ExternalTransactionId);
+					payment.ExtendedData.SetValue(ResponseKeys.MaskedCardNumber, keyedSaleResult.MaskedCardNumber);
 
 					payment.Collected = true;
 					payment.Authorized = true;
@@ -203,120 +174,18 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 
 				// Do your code for any additional task(s)
 			}
-			
-			// S6 Merchello Demo PO code, not for production
-			//var payment = GatewayProviderService.CreatePayment(PaymentMethodType.PurchaseOrder, amount, PaymentMethod.Key);
-			//payment.CustomerKey = invoice.CustomerKey;
-			//payment.PaymentMethodName = PaymentMethod.Name;
-			//payment.ReferenceNumber = PaymentMethod.PaymentCode + "-" + invoice.PrefixedInvoiceNumber();
-			//payment.Collected = true;
-			//payment.Authorized = true;
-
-			//var po = args.AsPurchaseOrderFormData();
-
-			//if (string.IsNullOrEmpty(po.PurchaseOrderNumber))
-			//{
-			//	return new PaymentResult(Attempt<IPayment>.Fail(payment, new Exception("Error Purchase Order Number is empty")), invoice, false);
-			//}
-
-			//invoice.PoNumber = po.PurchaseOrderNumber;
-			//MerchelloContext.Current.Services.InvoiceService.Save(invoice);
-
-			//GatewayProviderService.Save(payment);
-
-			//GatewayProviderService.ApplyPaymentToInvoice(payment.Key, invoice.Key, AppliedPaymentType.Debit, "Cash payment", amount);
-
-			//return new PaymentResult(Attempt<IPayment>.Succeed(payment), invoice, CalculateTotalOwed(invoice).CompareTo(amount) <= 0);
 		}
-
-		#region PayTrace Specific Methods
-
-		//public void BuildTransaction(string oAuth)
-		//{
-		//	// Key Sale Request
-		//	KeyedSaleRequest requestKeyedSale = new KeyedSaleRequest();
-
-		//	//KeySale Transaction Generator
-		//	KeyedSaleGenerator keyedSaleGenerator = new KeyedSaleGenerator();
-
-		//	// Assign the values to the key Sale Request.
-		//	requestKeyedSale = PopulateRequestData(requestKeyedSale);
-
-		//	// To make Keyed Sale Request and store the response
-		//	var result = keyedSaleGenerator.KeyedSaleTrans(oAuth, requestKeyedSale);
-
-		//	HandleKeyedSaleResult(result);
-
-		//}
-
+		
 		protected KeyedSaleRequest PopulateRequestData(KeyedSaleRequest requestKeyedSale, ProcessorArgumentCollection args)
 		{
-			requestKeyedSale.Amount = double.Parse(ArgValue(Constants.PayTrace.ProcessorArgumentsKeys.Amount, args));
-			// Note: If grouping doesn't preserve encryption each property can be mapped directl
+			requestKeyedSale.Amount = double.Parse(ArgValue(Constants.PayTrace.ProcessorArgumentsKeys.Amount, args));			
 			requestKeyedSale.ObjCreditCard = JsonConvert.DeserializeObject<PayTraceCreditCard>(ArgValue(Constants.PayTrace.ProcessorArgumentsKeys.PayTraceCreditCard, args));
 			requestKeyedSale.ObjBillingAddress = JsonConvert.DeserializeObject<PayTraceBillingAddress>(ArgValue(Constants.PayTrace.ProcessorArgumentsKeys.PayTraceBillingAddress, args));
 			requestKeyedSale.Csc = ArgValue(Constants.PayTrace.ProcessorArgumentsKeys.EncryptedCreditCardCode, args);
-			// TODO requestKeyedSale.integrator_id is required according to documentation?
-
+			
 			return requestKeyedSale;
 
 		}
-
-		//protected void HandleKeyedSaleResult(KeyedSaleResponse result)
-		//{
-
-		//	if (null != result.HttpErrorMessage && result.Success == false)
-		//	{
-		//		Debug.WriteLine("<br/>" + "Http Error Code & Error : " + result.HttpErrorMessage + "<br/>");
-
-		//		Debug.WriteLine("Success : " + result.Success + "<br/>");
-		//		Debug.WriteLine("response_code : " + result.ResponseCode + "<br/>");
-		//		Debug.WriteLine("status_message : " + result.StatusMessage + "<br/>");
-		//		Debug.WriteLine("external_transaction_id : " + result.ExternalTransactionId + "<br/>");
-		//		Debug.WriteLine("masked_card_number : " + result.MaskedCardNumber + "<br/>");
-
-		//		//Check the actual API errors with appropriate code
-		//		Debug.WriteLine(" API errors : " + "<br/>");
-		//		foreach (var item in result.TransactionErrors)
-		//		{
-		//			// to read Error message with each error code in array.
-		//			foreach (var errorMessage in (string[])item.Value)
-		//			{
-		//				Debug.WriteLine(item.Key + "=" + errorMessage + "<br/>");
-		//			}
-		//		}
-		//		Debug.WriteLine("Keyed sale: " + "Failed!" + "<br/>");
-
-		//	}
-		//	else
-		//	{
-		//		// Do your code when Response is available based on the response_code. 
-		//		// Please refer to PayTrace-HTTP Status and Error Codes page for possible errors and Response Codes
-		//		// For transation successfully approved 
-		//		if (result.ResponseCode == 101 && result.Success == true)
-		//		{
-		//			// Do your code for any additional verification
-
-		//			// Display Response - optional
-		//			//DisplaySaleResponse(result);
-		//			Debug.WriteLine("Keyed sale: " + "Success!" + "<br/>");
-		//		}
-		//		else
-		//		{
-		//			// Do your code here based on the response_code - use the PayTrace http status and error page for reference
-		//			// Do your code for any additional verification - avs_response and csc_response
-
-		//			//Display Response
-		//			//DisplaySaleResponse(result);
-		//			Debug.WriteLine("Error : " + result.HttpErrorMessage + "<br/>");
-
-		//		}
-
-		//		// Do your code for Any additional task !
-		//	}
-		//}
-
-		#endregion PayTrace Specific Methods
 			
 		/// <summary>
 		/// Does the actual work capturing a payment
