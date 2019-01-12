@@ -273,6 +273,7 @@
     <Compile Include="Factories\BraintreePaymentModelFactory.cs" />
     <Compile Include="Factories\ItemCacheModelFactory.cs" />
     <Compile Include="Factories\PayTracePaymentModelFactory.cs" />
+    <Compile Include="Factories\PayTraceRedirectPaymentModelFactory.cs" />
     <Compile Include="Localization\StoreFormsResource.Designer.cs">
       <DependentUpon>StoreFormsResource.resx</DependentUpon>
       <AutoGen>True</AutoGen>
@@ -284,7 +285,9 @@
     <Compile Include="Models\BraintreeCcPaymentModel.cs" />
     <Compile Include="Models\BraintreePaymentModel.cs" />
     <Compile Include="Models\IPurchaseOrderPaymentModel.cs" />
+    <Compile Include="Models\PayTraceBillingAddress.cs" />
     <Compile Include="Models\PayTraceEncryptedPaymentModel.cs" />
+    <Compile Include="Models\PayTraceRedirectPaymentModel.cs" />
     <Compile Include="Models\StoreItemCacheModel.cs" />
     <Compile Include="Models\StorePaymentModel.cs" />
     <Compile Include="Models\StoreAddressModel.cs" />

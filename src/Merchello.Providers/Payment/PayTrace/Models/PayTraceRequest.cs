@@ -2,7 +2,7 @@
 using Newtonsoft.Json;
 
 
-namespace Merchello.Providers
+namespace Merchello.Providers.Payment.PayTrace.Models
 {
     /// <summary>
     /// class that contains API username and password for requesting OAuthToken
@@ -12,7 +12,7 @@ namespace Merchello.Providers
     {		
         public static string GrantType = "password"; // S6 TODO web.config all parameters
 		public static string UserName = "cbell%40sidesixmedia.com"; // Url-encoded from: "cbell@sidesixmedia.com"
-		public static string Password = "PLiy3%25%3B%7DEOhN8!s3"; // Url-encoded from: "PLiy3%;}EOhN8!s3"
+		public static string Password = "PLiy3%25%3B%7DEOhN8!s4"; // Url-encoded from: "PLiy3%;}EOhN8!s3"
 
         public static string GetFormattedRequest()
         {

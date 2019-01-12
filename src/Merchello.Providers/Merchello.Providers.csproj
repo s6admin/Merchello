@@ -283,6 +283,7 @@
     </Compile>
     <Compile Include="Caching\CacheKeys.cs" />
     <Compile Include="Constants-PayTrace.cs" />
+    <Compile Include="Constants-PayTraceRedirect.cs" />
     <Compile Include="Constants-PurchaseOrder.cs">
       <DependentUpon>Constants.cs</DependentUpon>
     </Compile>
@@ -298,6 +299,7 @@
     </Compile>
     <Compile Include="Exceptions\BraintreeApiException.cs" />
     <Compile Include="Exceptions\PayPalApiException.cs" />
+    <Compile Include="Exceptions\PayTraceRedirectApiException.cs" />
     <Compile Include="Payment\Braintree\Models\BraintreeProviderSettings.cs" />
     <Compile Include="Models\IPaymentProviderSettings.cs" />
     <Compile Include="Payment\PayPal\Controllers\IPayPalSurfaceController.cs" />
@@ -376,15 +378,29 @@
     <Compile Include="Payment\PayPal\Services\PayPalApiService.cs" />
     <Compile Include="Payment\PayPal\Services\PayPalApiServiceBase.cs" />
     <Compile Include="Payment\PayPal\Services\PayPalExpressCheckoutService.cs" />
+    <Compile Include="Payment\PayTrace\Controllers\PayTraceRedirectAPIController.cs" />
+    <Compile Include="Payment\PayTrace\Controllers\PayTraceRedirectAPIControllerBase.cs" />
+    <Compile Include="Payment\PayTrace\Controllers\PayTraceRedirectSurfaceControllerBase.cs" />
+    <Compile Include="Payment\PayTrace\Controllers\PayTraceRedirectController.cs" />
     <Compile Include="Payment\PayTrace\JsonSerializer.cs" />
     <Compile Include="Payment\PayTrace\KeyedSaleGenerator.cs" />
+    <Compile Include="Payment\PayTrace\Models\PayTraceProviderSettings.cs" />
+    <Compile Include="Payment\PayTrace\Models\PayTraceRedirectResponse.cs" />
+    <Compile Include="Payment\PayTrace\Models\PayTraceRedirectTransaction.cs" />
+    <Compile Include="Payment\PayTrace\Models\PayTraceRedirectTransactionRecord.cs" />
     <Compile Include="Payment\PayTrace\PayTraceOAuthTokenGenerator.cs" />
-    <Compile Include="Payment\PayTrace\PayTraceRequest.cs" />
-    <Compile Include="Payment\PayTrace\PayTraceResponse.cs" />
+    <Compile Include="Payment\PayTrace\Models\PayTraceRequest.cs" />
+    <Compile Include="Payment\PayTrace\Models\PayTraceResponse.cs" />
+    <Compile Include="Payment\PayTrace\PayTraceRedirectProcessor.cs" />
     <Compile Include="Payment\PayTrace\Provider\IPayTracePaymentGatewayMethod.cs" />
     <Compile Include="Payment\PayTrace\Provider\IPayTracePaymentGatewayProvider.cs" />
+    <Compile Include="Payment\PayTrace\Provider\PayTraceRedirectPaymentGatewayMethod.cs" />
+    <Compile Include="Payment\PayTrace\Provider\PayTraceRedirectPaymentGatewayProvider.cs" />
     <Compile Include="Payment\PayTrace\Provider\PayTracePaymentGatewayMethod.cs" />
     <Compile Include="Payment\PayTrace\Provider\PayTracePaymentGatewayProvider.cs" />
+    <Compile Include="Payment\PayTrace\Services\IPayTraceRedirectService.cs" />
+    <Compile Include="Payment\PayTrace\Services\PayTraceRedirectService.cs" />
+    <Compile Include="Payment\PayTrace\Services\PayTraceAPIServiceBase.cs" />
     <Compile Include="Payment\PurchaseOrder\PurchaseOrderFormData.cs" />
     <Compile Include="Payment\PurchaseOrder\PurchaseOrderInfoExtensions.cs" />
     <Compile Include="Payment\PurchaseOrder\Provider\IPurchaseOrderPaymentGatewayMethod.cs" />
@@ -412,9 +428,7 @@
     <None Include="packages.config" />
     <None Include="Settings.StyleCop" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Payment\PayTrace\Models\" />
-  </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\AutoMapper.3.3.1\tools\AutoMapper.targets" Condition="Exists('..\packages\AutoMapper.3.3.1\tools\AutoMapper.targets')" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

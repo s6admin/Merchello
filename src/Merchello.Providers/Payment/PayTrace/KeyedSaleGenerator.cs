@@ -3,8 +3,9 @@ using System.Net;
 using System.IO;
 using System.Text;
 using System.Collections.Generic ;
+using Merchello.Providers.Payment.PayTrace.Models;
 
-namespace Merchello.Providers
+namespace Merchello.Providers.Payment.PayTrace
 {
     /// <summary>
     /// Method for builiding Transaction with Json Request,call the actual transaction execution method and call for Deseralize Json 

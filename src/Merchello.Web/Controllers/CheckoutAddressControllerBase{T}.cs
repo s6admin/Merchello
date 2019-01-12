@@ -171,7 +171,7 @@
                 var address = ShippingAddressFactory.Create(model);
 
                 // Temporarily save the address in the checkout manager.
-                this.CheckoutManager.Customer.SaveShipToAddress(address); // S6 This is the call that starts deleting addresses because Checkoutmanager.Customer doesn't have all the records like CurrentCustomer does. Is this correct behavior?
+                this.CheckoutManager.Customer.SaveShipToAddress(address); 
 
                 if (!this.CurrentCustomer.IsAnonymous) this.SaveCustomerShippingAddress(model);
 

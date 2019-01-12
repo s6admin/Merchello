@@ -6,7 +6,7 @@ using System.Collections.Generic ;
 using Newtonsoft.Json;
 
 
-namespace Merchello.Providers
+namespace Merchello.Providers.Payment.PayTrace.Models
 {	
 	/// <summary>
 	/// class to hold temprory Json Response and Error message for any response.
@@ -273,11 +273,7 @@ namespace Merchello.Providers
 			return objTempResponse ;
 
 		}
-
 	}
-
-
-
 }
 
 

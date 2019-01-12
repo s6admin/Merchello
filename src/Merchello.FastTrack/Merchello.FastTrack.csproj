@@ -273,6 +273,7 @@
     <Compile Include="Controllers\CheckoutSummaryController.cs" />
     <Compile Include="Controllers\Payment\FastTrackBraintreeControllerBase.cs" />
     <Compile Include="Controllers\Payment\PayTracePaymentController.cs" />
+    <Compile Include="Controllers\Payment\PayTraceRedirectPaymentController.cs" />
     <Compile Include="Controllers\Payment\PurchaseOrderPaymentController.cs" />
     <Compile Include="Factories\FastTrackBillingAddressModelFactory.cs" />
     <Compile Include="Factories\FastTrackCheckoutAddressModelFactoryBase{T}.cs" />

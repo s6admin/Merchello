@@ -11,6 +11,7 @@ using Merchello.Providers;
 using System.Diagnostics;
 using Newtonsoft.Json;
 using static Merchello.Providers.Constants.PayTrace;
+using Merchello.Providers.Payment.PayTrace.Models;
 
 namespace Merchello.Providers.Payment.PayTrace.Provider
 {
@@ -78,7 +79,7 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 		}
 
 		/// <summary>
-		/// Does the actual work of authorizing and capturing a payment
+		/// Does the actual work of authorizing and capturing a payment. This is used with the PayTrace encrypted JSON provider, not the redirect provider.
 		/// </summary>
 		/// <param name="invoice">The <see cref="IInvoice"/></param>
 		/// <param name="amount">The amount to capture</param>

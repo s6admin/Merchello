@@ -10,14 +10,14 @@ namespace Merchello.Providers
 		/// <summary>
 		/// PayTrace constants.
 		/// </summary>
-		public static class PayTrace
+		public static class PayTraceRedirect
 		{
 			/// <summary>
-			/// The PayTrace payment gateway provider key.
+			/// The PayTrace Redirect payment gateway provider key.
 			/// </summary>
 			/// <remarks>			
 			/// </remarks>
-			public const string GatewayProviderKey = "493b34d2-1a98-464d-9ee5-1a75f8d50353";
+			public const string GatewayProviderKey = "0affc18f-7028-4e14-a823-8dbfa0da0309";
 			
 			/// <summary>
 			/// Gets the gateway provider settings key.
@@ -36,11 +36,6 @@ namespace Merchello.Providers
 			public static class PaymentCodes
 			{
 				/// <summary>
-				/// Identifer for a front-end JSON PayTrace Encrypted payment.
-				/// </summary>
-				public const string Checkout = "PayTrace";
-
-				/// <summary>
 				/// Identifier for a PayTrace Redirect (remote site) payment
 				/// </summary>
 				public const string RedirectCheckout = "PayTraceRedirect";
@@ -54,15 +49,13 @@ namespace Merchello.Providers
 				/// <summary>
 				/// Gets the processor settings.
 				/// </summary>
-				public const string ProviderSettings = "PayTraceprovidersettings";
+				public const string ProviderSettings = "PayTraceRedirectprovidersettings";
 
 				/// <summary>
-				/// The pay pal  transaction key.
+				/// The transaction key.
 				/// </summary>
-				public const string PayTraceTransaction = "PayTracetransaction";
-
-				public const string PayTraceRedirectTransaction = "PayTraceRedirectTransaction";
-
+				public const string PayTraceTransaction = "PayTraceRedirectTransaction";
+								
 				/// <summary>
 				/// A counter for keeping track of failed payment attempts. This is for website use only and is not an official PayTrace property.
 				/// </summary>
@@ -139,15 +132,7 @@ namespace Merchello.Providers
 						return "internalPaymentKey";
 					}
 				}
-
-				public static string PayTraceCreditCard
-				{
-					get
-					{
-						return "credit_card";
-					}
-				}
-
+				
 				public static string PayTraceBillingAddress
 				{
 					get
@@ -155,39 +140,7 @@ namespace Merchello.Providers
 						return "billing_address";
 					}
 				}
-								
-				public static string EncryptedCreditCardNumber
-				{
-					get
-					{
-						return "encrypted_number";
-					}
-				}
-
-				public static string EncryptedCreditCardCode
-				{
-					get
-					{
-						return "encrypted_csc";
-					}
-				}
-
-				public static string ExpirationMonth
-				{
-					get
-					{
-						return "expiration_month";
-					}
-				}
-
-				public static string ExpirationYear
-				{
-					get
-					{
-						return "expiration_year";
-					}
-				}
-
+				
 				/// <summary>
 				/// The Billing Address Name.
 				/// </summary>

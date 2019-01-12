@@ -20,6 +20,7 @@ namespace Merchello.FastTrack.Controllers.Payment
 	using Web.Factories;
 	using Umbraco.Core.Logging;
 	using Core.Logging;
+	using Providers.Payment.PayTrace;
 
 	// S6 This is for the front-end encryption PayTrace provider, not the redirect provider
 
@@ -239,7 +240,7 @@ namespace Merchello.FastTrack.Controllers.Payment
 				return json;
 			}
 
-			// Remove any previously-saved failed payment attempts if one actually does succeed			
+			// Remove any previously-saved failed payment attempts if one actually does succeed						
 			if (CheckoutManager.Customer.Context.Customer.ExtendedData.ContainsKey(MC.PayTrace.ExtendedDataKeys.FailedAttempts))
 			{
 				CheckoutManager.Customer.Context.Customer.ExtendedData.RemoveValue(MC.PayTrace.ExtendedDataKeys.FailedAttempts);

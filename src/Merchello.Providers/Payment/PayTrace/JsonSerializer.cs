@@ -4,8 +4,9 @@ using System.IO;
 using System.Text;
 using System.Collections.Generic;
 using Newtonsoft.Json;
+using Merchello.Providers.Payment.PayTrace.Models;
 
-namespace Merchello.Providers
+namespace Merchello.Providers.Payment.PayTrace
 {
 	public class JsonSerializer
 	{
