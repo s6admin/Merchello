@@ -59,6 +59,7 @@ namespace Merchello.FastTrack.Controllers.Payment
 			if (invoice != null)
 			{
 				model.Amount = decimal.ToDouble(invoice.Total);
+				model.TaxAmount = invoice.TotalTax();
 				//model.OrderNumber = invoice.PoNumber;
 			}
 

@@ -57,9 +57,9 @@ namespace Merchello.Providers.Payment.PayTrace.Services
 
 		internal PayTraceRedirectTransactionRecord DoCheckoutPayment(IInvoice invoice, IPayment payment, string token, string payerId, PayTraceRedirectTransactionRecord record)
 		{
+			// This lets us perform payments directly with the PayTrace Redirect workflow
 			try
 			{
-
 				/*
 				[ ] SendValidationRequest
 				[ ] ParseResponse
