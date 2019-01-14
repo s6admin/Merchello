@@ -107,15 +107,14 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 			// so we create an applied payment with a 0 amount.  Once the payment has been "collected", another Applied Payment record will
 			// be created showing the full amount and the invoice status will be set to Paid.
 			GatewayProviderService.ApplyPaymentToInvoice(payment.Key, invoice.Key, AppliedPaymentType.Debit, string.Format("To show promise of a {0} payment via PayTrace  Checkout", PaymentMethod.Name), 0);
-			
-			// if the ACK was success return a success IPaymentResult
+						
 			if (record.Success)
 			{
-				return new PaymentResult(Attempt<IPayment>.Succeed(payment), invoice, false, record.SetCheckout.RedirectUrl);
+				return new PaymentResult(Attempt<IPayment>.Succeed(payment), invoice, false); // ,record.SetCheckout.RedirectUrl
 			}
 
 			// In the case of a failure, package up the exception so we can bubble it up.
-			var ex = new PayTraceRedirectApiException("PayTrace Checkout initial response ACK was not Success");			
+			var ex = new PayTraceRedirectApiException("PayTrace Checkout initial response failed.");			
 			//if (record.SetCheckout.ErrorTypes.Any()) ex.ErrorTypes = record.SetCheckout.ErrorTypes;
 
 			return new PaymentResult(Attempt<IPayment>.Fail(payment, ex), invoice, false);

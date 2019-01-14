@@ -7,6 +7,7 @@ using Merchello.Core.Logging;
 using Merchello.Providers.Payment.PayTrace.Models;
 using Umbraco.Core.Events;
 using Merchello.Core.Events;
+using Umbraco.Core.Logging;
 
 namespace Merchello.Providers.Payment.PayTrace.Services
 {
@@ -87,11 +88,24 @@ namespace Merchello.Providers.Payment.PayTrace.Services
 			var record = new PayTraceRedirectTransactionRecord
 			{
 				Success = true,
-				Data = { Authorized = false, CurrencyCode = invoice.CurrencyCode }
+				Data = { Authorized = false, CurrencyCode = invoice.CurrencyCode }			
+				
 			};
-
-			return record;
-
+			try
+			{
+				record.SetCheckout = new PayTraceRedirectResponse();
+				if (record.SetCheckout.Success())
+				{
+					//record.Data.Token = response.Token;
+					//record.SetCheckout.RedirectUrl = GetRedirectUrl(response.Token);
+				}
+			}
+			catch (Exception ex)
+			{
+				LogHelper.Error(typeof(PayTraceRedirectService), ex.Message, ex);
+			}
+			
+			
 			//var factory = new PayTracePaymentDetailsTypeFactory(new PayTraceFactorySettings { WebsiteUrl = _websiteUrl });
 			//var paymentDetailsType = factory.Build(invoice, PaymentActionCodeType.ORDER);
 
@@ -129,7 +143,7 @@ namespace Merchello.Providers.Payment.PayTrace.Services
 			//	var service = GetPayTraceService();
 			//	var response = service.SetCheckout(wrapper);
 
-			//	record.SetCheckout = _responseFactory.Build(response, response.Token);
+			//record.SetCheckout = _responseFactory.Build(response, response.Token);
 			//	if (record.SetCheckout.Success())
 			//	{
 			//		record.Data.Token = response.Token;
@@ -154,7 +168,7 @@ namespace Merchello.Providers.Payment.PayTrace.Services
 			//	record.SetCheckout = _responseFactory.Build(ex);
 			//}
 
-			//return record;
+			return record;
 		}
 
 		// S6 Taken from PayTraceAPIHelper

@@ -54,7 +54,7 @@ namespace Merchello.FastTrack.Controllers.Payment
 
 			// Set any eComm or CMS properties we don't want to scope into the PayTrace Factory
 
-			// Preparing the invoice saves and generates a key. This should only be done once per checkout unless the basket is invalidated
+			// This should only be done once per checkout unless the basket is invalidated
 			IInvoice invoice = PrepareInvoiceOnce();
 			if (invoice != null)
 			{

@@ -16,7 +16,9 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 	{
 		public PayTraceRedirectTransactionRecord()
 		{
-			
+			this.Success = true;
+			this.Data = new PayTraceRedirectTransaction() { Authorized = false };
+			this.RefundTransactions = Enumerable.Empty<PayTraceRedirectResponse>();
 		}
 
 		/// <summary>

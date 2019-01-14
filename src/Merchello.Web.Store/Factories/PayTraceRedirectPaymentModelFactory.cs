@@ -55,6 +55,7 @@
 				model.BillingAddress.StreetAddress = ba.Address1;
 				model.BillingAddress.StreetAddress2 = ba.Address2;
 				model.BillingAddress.Zip = ba.PostalCode;
+				model.CustomerEmail = ba.Email;
 			}
 		}
 	}

@@ -66,45 +66,99 @@
 
 			// Set any eComm or CMS properties we don't want to scope into the PayTrace Factory
 
-			// Preparing the invoice saves and generates a key. This should only be done once per checkout unless the basket is invalidated
-			IInvoice invoice = PrepareInvoiceOnce();
-			if (invoice != null)
-			{
-				model.Amount = decimal.ToDouble(invoice.Total);
-				model.TaxAmount = invoice.TotalTax();
-				model.OrderNumber = invoice.PoNumber;
-			}
+			// There is no reason to prep the invoice here because the rendered payment form for PayTrace Redirect doesn't display any specific values. Prep after the customer clicks the form button
+			//IInvoice invoice = PrepareInvoiceOnce();
+			//if (invoice != null)
+			//{
+			//	model.Amount = decimal.ToDouble(invoice.Total);
+			//	model.TaxAmount = invoice.TotalTax();
+			//	if(invoice.PoNumber != null && invoice.PoNumber.Length > 0)
+			//	{
+			//		model.OrderNumber = invoice.PoNumber;
+			//	}			
+			//}
 
 			return view.IsNullOrWhiteSpace() ? this.PartialView(model) : this.PartialView(view, model);
 		}
 
 		/// <summary>
-		/// Begins the PayTrace Redirect process after the customer clicks the form button (no fields are submitted).
+		/// Begins the PayTrace Redirect process after the customer clicks the form button (no fields are submitted). This method is called PROCESS in the referenced PayPal Express provider.
 		/// </summary>
 		/// <returns></returns>
+		[HttpPost]
+		[ValidateAntiForgeryToken]
 		public ActionResult HandlePaymentForm(PayTraceRedirectPaymentModel model)
 		{
-			// Redirect PaymentForm doesn't have any submitable fields so just rebuild the model as is done in the render method so we can repopulate Billing Address and Order details
+			/* 
+				Redirect PaymentForm doesn't have any submitable fields so just rebuild the model as is done in the render method so we can repopulate Billing Address and Order details
+				Keep this BEFORE calls to CheckoutManager.AuthorizePayment otherwise the customer extendedData seems to lose the billing address info
+			*/
 			var paymentMethod = this.CheckoutManager.Payment.GetPaymentMethod();
-			if (paymentMethod == null) return this.InvalidCheckoutStagePartial();
+			if (paymentMethod == null)
+			{
+				var ex = new NullReferenceException("PaymentMethod was null");
+				return HandlePaymentException(model, ex);
+			}
+						
 			model = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod);
 
-			IInvoice invoice = PrepareInvoiceOnce();
-			if (invoice != null)
+			CheckoutManager.Context.Settings.EmptyBasketOnPaymentSuccess = false;
+
+			// Create zero dollar payment (promise of) so an Invoice Id is generated and can be provided to the PayTrace redirect page
+			var attempt = CheckoutManager.Payment.AuthorizePayment(paymentMethod.Key); // S6 Args for PayTrace can also be included if needed
+			var resultModel = CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod, attempt);
+			
+			if (!attempt.Payment.Success)
 			{
-				model.Amount = decimal.ToDouble(invoice.Total);
-				model.TaxAmount = invoice.TotalTax();
-				model.OrderNumber = invoice.PoNumber;
+				LogHelper.Error(typeof(PayTraceRedirectPaymentController), "AuthorizePayment failed. ", attempt.Payment.Exception);
+				return CurrentUmbracoPage();
+				//return Redirect(attempt.RedirectUrl); // PayTrace must be authorized before implementing the redirect
 			}
+
+			CustomerContext.SetValue("invoiceKey", attempt.Invoice.Key.ToString());
+			string redirectUrl = string.Empty;
+			if (attempt.RedirectUrl != null && attempt.RedirectUrl.Length > 0)
+			{
+				redirectUrl = attempt.RedirectUrl;
+			}
+			else
+			{
+				redirectUrl = ValidatePayUrl;
+			}
+			
+			// TODO Implement if PayTrace has a similar cancel option
+			//if (!model.ViewData.Success)
+			//{
+			//	var invoiceKey = attempt.Invoice.Key;
+			//	var paymentKey = attempt.Payment.Result != null ? attempt.Payment.Result.Key : Guid.Empty;
+			//	//EnsureDeleteInvoiceOnCancel(invoiceKey, paymentKey); // Available in PayPalExpressPaymentController
+			//}
+
+			if (attempt.Invoice != null)
+			{
+				model.Amount = decimal.ToDouble(attempt.Invoice.Total);
+				model.TaxAmount = attempt.Invoice.TotalTax();
+
+				// https://our.umbraco.com/packages/collaboration/merchello/merchello/72986-non-inline-payment-provider				
+				if (attempt.Invoice.PoNumber != null && attempt.Invoice.PoNumber.Length > 0)
+				{
+					model.OrderNumber = attempt.Invoice.PoNumber;
+				}
+			}
+
+			#region S6 based on JSON Encrypted PayTrace Provider
+
+			//model = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod);
+
+			//IInvoice invoice = PrepareInvoiceOnce();
+
+
+			#endregion S6 
 
 			//format parameters for request 
 			// to get an approval amount set: AMOUNT~1.00
 			// to get a declined amount set: AMOUNT~1.12
 			string parameters = string.Empty;
-
-			// Test data
-			//parameters += "UN~demo123|PSWD~demo123|TERMS~Y|TRANXTYPE~Sale|";
-			//parameters += "ORDERID~1234|AMOUNT~1.00|";
 
 			parameters += "UN~" + ApiAccessCredentials.UserName + "|";
 			parameters += "PSWD~" + ApiAccessCredentials.Password + "|";
@@ -113,8 +167,7 @@
 			parameters += "TERMS~Y|TRANXTYPE~Sale|";
 			
 			string return_url = @"http://" + Request.Url.Authority;
-
-			// TODO Change Urls and externalize
+						
 			parameters += "ApproveURL~" + return_url + "/receipt" + "|";
 			parameters += "DeclineURL~" + return_url + "/checkout/payment" + "|"; // If declined, send customer back to payment page otherwise create a custom landing page with a declined message
 			
@@ -163,8 +216,9 @@
 				op += "RETURNPARIS~Y|";
 				op += "ENABLEREDIRECT~Y" + "|";
 				op += "TEST~Y" + "|";
-				
-				// op += "~" + "|";
+
+				// Parameter structure
+				// op += "~" + "|"; 
 
 				// Append encoded optional parameters
 				url += op;
@@ -281,17 +335,18 @@
 
 			// Check for an invoice key in customer context so duplicate invoices aren't created (ie.) during payment failures
 			try
-			{
+			{				
 				invoiceKey = new Guid(CustomerContext.GetValue("invoiceKey"));
 			}
 			catch (Exception ex)
 			{
-
+				// Pseudo "CustomerContext.HasValue" catch for empty/missing attempts from new Guid()
 			}
+
 			if (invoiceKey.Equals(Guid.Empty))
 			{
 				// Prepare invoice for initial payment attempt
-				invoice = this.CheckoutManager.Payment.PrepareInvoice();
+				invoice = this.CheckoutManager.Payment.PrepareInvoice();				
 			}
 			else
 			{
