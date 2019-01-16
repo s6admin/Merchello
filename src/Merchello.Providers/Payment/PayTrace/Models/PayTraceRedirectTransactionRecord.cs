@@ -27,7 +27,7 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 		public bool Success { get; set; }
 		
 		/// <summary>
-		/// Gets or sets the general or common data used by multiple API calls.
+		/// Gets or sets the general/common data used by multiple API calls.
 		/// </summary>
 		public PayTraceRedirectTransaction Data { get; set; }
 

@@ -12,12 +12,14 @@ using Umbraco.Core.Logging;
 namespace Merchello.Providers.Payment.PayTrace.Services
 {
 	public class PayTraceRedirectService : PayTraceAPIServiceBase, IPayTraceRedirectService
-	{
-		// TODO Other PayTrace NVPs in SilentPost: ORDERID, TRANSACTIONID, APPMSG, AVSRESPONSE, CSCRESPONSE, EMAIL
+	{		
+		// Actual methods are defined in PayTraceRedirectAPIController.cs
 		private const string DefaultReturnUrl = "{0}/umbraco/merchello/paytraceredirect/success?invoiceKey={1}&paymentKey={2}";
 
 		private const string DefaultCancelUrl = "{0}/umbraco/merchello/paytraceredirect/cancel?invoiceKey={1}&paymentKey={2}";
-		
+
+		private const string DefaultSilentResponse = "{0}/umbraco/merchello/paytraceredirect/paytracesilentresponse?invoiceKey={1}&paymentKey={2}";
+
 		private const string Version = "";
 
 		private readonly string _websiteUrl;
@@ -27,7 +29,7 @@ namespace Merchello.Providers.Payment.PayTrace.Services
 		public PayTraceRedirectService(PayTraceRedirectProviderSettings settings) 
 			: base(settings)
 		{
-			_websiteUrl = GetBaseWebsiteUrl();
+			_websiteUrl = PayTraceHelper.GetBaseWebsiteUrl();
 		}
 
 		/// <summary>
@@ -54,9 +56,8 @@ namespace Merchello.Providers.Payment.PayTrace.Services
 		{
 			throw new NotImplementedException();
 		}
-
-
-		internal PayTraceRedirectTransactionRecord DoCheckoutPayment(IInvoice invoice, IPayment payment, string token, string payerId, PayTraceRedirectTransactionRecord record)
+		
+		internal PayTraceRedirectTransactionRecord DoCheckoutPayment(IInvoice invoice, IPayment payment, string token, PayTraceRedirectTransactionRecord record)
 		{
 			// This lets us perform payments directly with the PayTrace Redirect workflow
 			try
@@ -88,7 +89,7 @@ namespace Merchello.Providers.Payment.PayTrace.Services
 			var record = new PayTraceRedirectTransactionRecord
 			{
 				Success = true,
-				Data = { Authorized = false, CurrencyCode = invoice.CurrencyCode }			
+				Data = { Authorized = false }			
 				
 			};
 			try
@@ -169,35 +170,6 @@ namespace Merchello.Providers.Payment.PayTrace.Services
 			//}
 
 			return record;
-		}
-
-		// S6 Taken from PayTraceAPIHelper
-		private string GetBaseWebsiteUrl()
-		{
-			var websiteUrl = string.Empty;
-			try
-			{
-				var url = HttpContext.Current.Request.Url;
-				websiteUrl =
-					string.Format(
-						"{0}://{1}{2}",
-						url.Scheme,
-						url.Host,
-						url.IsDefaultPort ? string.Empty : ":" + url.Port).EnsureNotEndsWith('/');
-			}
-			catch (Exception ex)
-			{
-				var logData = MultiLogger.GetBaseLoggingData();
-				logData.AddCategory("PayTrace");
-
-				MultiLogHelper.WarnWithException(
-					typeof(PayTraceRedirectService),
-					"Failed to initialize factory setting for WebsiteUrl.  HttpContext.Current.Request is likely null.",
-					ex,
-					logData);
-			}
-
-			return websiteUrl;
 		}
 	}
 }

@@ -11,11 +11,10 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 		public PayTraceRedirectTransaction()
 		{
 			Token = string.Empty;
-			PayerId = string.Empty;
-			AuthorizationTransactionId = string.Empty;
-			AuthorizedAmount = string.Empty;
-			CaptureTransactionId = string.Empty;
-			CurrencyId = string.Empty;
+			OrderId = string.Empty;
+			AppMsg = string.Empty;
+			AvsResponse = string.Empty;
+			CscResponse = string.Empty;
 			Authorized = false;
 		}
 
@@ -24,43 +23,24 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 		/// </summary>
 		public string Token { get; set; }
 
-		/// <summary>
-		/// Gets or sets the currency code.
-		/// </summary>
-		public string CurrencyCode { get; set; }
+		// The below properties are repeated in PayTraceReidrectSilentResponse. Can we combine them to keep things DRY?
+		public string OrderId { get; set; }
 
-		/// <summary>
-		/// Gets or sets the payer id.
-		/// </summary>
-		public string PayerId { get; set; }
+		public string AppMsg { get; set; }
+
+		public string AvsResponse { get; set; }
+
+		public string CscResponse { get; set; }
+
+		public string Email { get; set; }
 
 		/// <summary>
 		/// Gets or sets the checkout payment transaction id.
 		/// </summary>
-		public string CheckoutPaymentTransactionId { get; set; }
-
+		public string TransactionId { get; set; }
+		
 		/// <summary>
-		/// Gets or sets the authorization transaction id.
-		/// </summary>
-		public string AuthorizationTransactionId { get; set; }
-
-		/// <summary>
-		/// Gets or sets the authorized amount.
-		/// </summary>
-		public string AuthorizedAmount { get; set; }
-
-		/// <summary>
-		/// Gets or sets the capture transaction id.
-		/// </summary>
-		public string CaptureTransactionId { get; set; }
-
-		/// <summary>
-		/// Gets or sets the currency id.
-		/// </summary>
-		public string CurrencyId { get; set; }
-
-		/// <summary>
-		/// Gets or sets a value indicating whether the transaction was authorized on the PayPal end.
+		/// Gets or sets a value indicating whether the transaction was authorized on the provider's end
 		/// </summary>
 		public bool Authorized { get; set; }
 	}

@@ -53,7 +53,8 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 		/// <returns>
 		/// The <see cref="ActionResult"/>.
 		/// </returns>
-		public abstract ActionResult Success(Guid invoiceKey, Guid paymentKey, string token, string payerId);
+		//public abstract ActionResult Success(Guid invoiceKey, Guid paymentKey, string token, string payerId);
+		public abstract ActionResult Success(string paramList); // PayTrace Redirect returns all values as a urlencoded query string parameter named "parmList"
 
 		/// <summary>
 		/// Handles a cancellation response from PayTrace

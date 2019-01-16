@@ -386,8 +386,10 @@
     <Compile Include="Payment\PayTrace\KeyedSaleGenerator.cs" />
     <Compile Include="Payment\PayTrace\Models\PayTraceProviderSettings.cs" />
     <Compile Include="Payment\PayTrace\Models\PayTraceRedirectResponse.cs" />
+    <Compile Include="Payment\PayTrace\Models\PayTraceRedirectSilentResponse.cs" />
     <Compile Include="Payment\PayTrace\Models\PayTraceRedirectTransaction.cs" />
     <Compile Include="Payment\PayTrace\Models\PayTraceRedirectTransactionRecord.cs" />
+    <Compile Include="Payment\PayTrace\PayTraceHelper.cs" />
     <Compile Include="Payment\PayTrace\PayTraceOAuthTokenGenerator.cs" />
     <Compile Include="Payment\PayTrace\Models\PayTraceRequest.cs" />
     <Compile Include="Payment\PayTrace\Models\PayTraceResponse.cs" />

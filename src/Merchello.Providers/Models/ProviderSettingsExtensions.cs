@@ -1,26 +1,27 @@
 ﻿namespace Merchello.Providers.Models
 {
-    using System;
-    using System.Reflection;
+	using System;
+	using System.Reflection;
 
-    using Merchello.Core.Gateways.Payment;
-    using Merchello.Core.Logging;
-    using Merchello.Core.Models;
-    using Merchello.Providers.Payment.Braintree.Models;
-    using Merchello.Providers.Payment.Models;
-    using Merchello.Providers.Payment.PayPal.Models;
-    using Merchello.Providers.Resolvers;
+	using Merchello.Core.Gateways.Payment;
+	using Merchello.Core.Logging;
+	using Merchello.Core.Models;
+	using Merchello.Providers.Payment.Braintree.Models;
+	using Merchello.Providers.Payment.Models;
+	using Merchello.Providers.Payment.PayPal.Models;
+	using Merchello.Providers.Resolvers;
 
-    using Newtonsoft.Json;
-    using Newtonsoft.Json.Serialization;
+	using Newtonsoft.Json;
+	using Newtonsoft.Json.Serialization;
 
-    using Umbraco.Core.Logging;
+	using Umbraco.Core.Logging;
+	using Payment.PayTrace.Models;
 
 
-    /// <summary>
-    /// The provider settings extensions.
-    /// </summary>
-    public static class ProviderSettingsExtensions
+	/// <summary>
+	/// The provider settings extensions.
+	/// </summary>
+	public static class ProviderSettingsExtensions
     {
 
         /// <summary>
@@ -73,17 +74,42 @@
             return settings;
         }
 
+		/// <summary>
+		/// S6 Gets the <see cref="PayTraceRedirectProviderSettings"/>.
+		/// </summary>
+		/// <param name="extendedData">
+		/// The extended data.
+		/// </param>
+		/// <returns>
+		/// The <see cref="PayTraceRedirectProviderSettings"/>.
+		/// </returns>
+		public static PayTraceRedirectProviderSettings GetPayTraceRedirectProviderSettings(this ExtendedDataCollection extendedData)
+		{
+			PayTraceRedirectProviderSettings settings;
+			if (extendedData.ContainsKey(Constants.PayTraceRedirect.ExtendedDataKeys.ProviderSettings))
+			{
+				var json = extendedData.GetValue(Constants.PayTraceRedirect.ExtendedDataKeys.ProviderSettings);
+				settings = JsonConvert.DeserializeObject<PayTraceRedirectProviderSettings>(json);
+			}
+			else
+			{
+				settings = new PayTraceRedirectProviderSettings();
+			}
 
-        /// <summary>
-        /// Gets the <see cref="ProviderSettingsMapperAttribute"/>.
-        /// </summary>
-        /// <param name="provider">
-        /// The provider.
-        /// </param>
-        /// <returns>
-        /// The <see cref="ProviderSettingsMapperAttribute"/>.
-        /// </returns>
-        internal static ProviderSettingsMapperAttribute ProviderSettingsMapping(this PaymentGatewayProviderBase provider)
+			return settings;
+		}
+
+
+		/// <summary>
+		/// Gets the <see cref="ProviderSettingsMapperAttribute"/>.
+		/// </summary>
+		/// <param name="provider">
+		/// The provider.
+		/// </param>
+		/// <returns>
+		/// The <see cref="ProviderSettingsMapperAttribute"/>.
+		/// </returns>
+		internal static ProviderSettingsMapperAttribute ProviderSettingsMapping(this PaymentGatewayProviderBase provider)
         {
             return provider.GetType().GetCustomAttribute<ProviderSettingsMapperAttribute>(false);
         }

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
+﻿
 namespace Merchello.Providers.Payment.PayTrace.Controllers
 {
 	using System;
@@ -20,7 +15,7 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 
 	using Umbraco.Core;
 	using Umbraco.Web.WebApi;
-
+	
 	public abstract class PayTraceRedirectAPIControllerBase : UmbracoApiController
 	{
 		private readonly IMerchelloContext _merchelloContext;

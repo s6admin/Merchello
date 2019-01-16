@@ -34,7 +34,7 @@
 			//record = _service.GetExpressCheckoutDetails(payment, record.Data.Token, record);
 			//if (!record.Success) return record;
 
-			record = Process(payment, _service.DoCheckoutPayment(invoice, payment, record.Data.Token, record.Data.PayerId, record));
+			record = Process(payment, _service.DoCheckoutPayment(invoice, payment, record.Data.Token, record));
 			if (!record.Success) return record;
 			
 			// This looks like a PayPal specific call because their original response isn't designed to identify success or failure

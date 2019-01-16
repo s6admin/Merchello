@@ -29,6 +29,8 @@
 	using System.IO;
 	using Providers.Payment.PayTrace.Models;
 	using System.Web;
+	using Providers.Models;
+	using Providers.Payment.PayTrace;
 
 	// S6 This is used for the PayTrace Redirect payment methods, not the Client-side Encryption JSON payment methods
 	[PluginController("FastTrack")]
@@ -89,18 +91,16 @@
 		[ValidateAntiForgeryToken]
 		public ActionResult HandlePaymentForm(PayTraceRedirectPaymentModel model)
 		{
-			/* 
-				Redirect PaymentForm doesn't have any submitable fields so just rebuild the model as is done in the render method so we can repopulate Billing Address and Order details
-				Keep this BEFORE calls to CheckoutManager.AuthorizePayment otherwise the customer extendedData seems to lose the billing address info
-			*/
+	
 			var paymentMethod = this.CheckoutManager.Payment.GetPaymentMethod();
 			if (paymentMethod == null)
 			{
 				var ex = new NullReferenceException("PaymentMethod was null");
 				return HandlePaymentException(model, ex);
 			}
-						
-			model = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod);
+
+			// Rebuild model to capture Billing Address/Email details which are otherwise lost after the call to AuthorizePayment below
+			model = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod); 
 
 			CheckoutManager.Context.Settings.EmptyBasketOnPaymentSuccess = false;
 
@@ -155,6 +155,8 @@
 
 			#endregion S6 
 
+			var settings = PayTraceHelper.GetProviderSettings();			
+			
 			//format parameters for request 
 			// to get an approval amount set: AMOUNT~1.00
 			// to get a declined amount set: AMOUNT~1.12
@@ -165,11 +167,11 @@
 			parameters += "ORDERID~" + model.OrderNumber + "|";
 			parameters += "AMOUNT~" + model.Amount + "|";
 			parameters += "TERMS~Y|TRANXTYPE~Sale|";
-			
-			string return_url = @"http://" + Request.Url.Authority;
 						
-			parameters += "ApproveURL~" + return_url + "/receipt" + "|";
-			parameters += "DeclineURL~" + return_url + "/checkout/payment" + "|"; // If declined, send customer back to payment page otherwise create a custom landing page with a declined message
+			// NOTE: These urls override any settings set in the PayTrace admin dashboard	
+			// TODO Pull them from the PayTraceRedirectProviderSettings if within scope		
+			parameters += "ApproveURL~" + settings.SuccessUrl + "|";
+			parameters += "DeclineURL~" + settings.DeclinedUrl + "|"; // If declined, send customer back to payment page otherwise create a custom landing page with a declined message
 			
 			string url = SendValidationRequest(parameters);
 
@@ -327,38 +329,5 @@
 			return true;
 		}
 		
-		// Special method for ensuring an invoice is only prepared once during the PaymentForm and/or Process checkout since we allow multiple payment attempts in case of gateway failure(s)
-		private IInvoice PrepareInvoiceOnce()
-		{
-			IInvoice invoice = null;
-			Guid invoiceKey = Guid.Empty;
-
-			// Check for an invoice key in customer context so duplicate invoices aren't created (ie.) during payment failures
-			try
-			{				
-				invoiceKey = new Guid(CustomerContext.GetValue("invoiceKey"));
-			}
-			catch (Exception ex)
-			{
-				// Pseudo "CustomerContext.HasValue" catch for empty/missing attempts from new Guid()
-			}
-
-			if (invoiceKey.Equals(Guid.Empty))
-			{
-				// Prepare invoice for initial payment attempt
-				invoice = this.CheckoutManager.Payment.PrepareInvoice();				
-			}
-			else
-			{
-				/* 
-					An invoice key is already present in customer context which means a previous payment attempt was made and failed
-					In this case we want to retrieve the existing invoice, not create duplicates for each payment attempt					
-				*/
-				invoice = CheckoutManager.Context.Services.InvoiceService.GetByKey(invoiceKey);
-			}
-
-			return invoice;
-		}
-
 	}
 }

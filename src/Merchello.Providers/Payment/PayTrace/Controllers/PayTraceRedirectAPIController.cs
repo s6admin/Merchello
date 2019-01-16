@@ -45,7 +45,7 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 				// Redirect to site
 				CustomerContext.SetValue("invoiceKey", invoiceKey.ToString());
 				// var returnUrl = payment.ExtendedData.GetValue(Constants.ExtendedDataKeys.ReturnUrl);
-				var response = Request.CreateResponse(HttpStatusCode.Moved);
+				var response = Request.CreateResponse(HttpStatusCode.Moved);				
 				// response.Headers.Location = new Uri(returnUrl.Replace("%INVOICE%", invoice.Key.ToString().EncryptWithMachineKey()));
 				return response;
 
@@ -78,7 +78,7 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			MultiLogHelper.Info<PayTraceRedirectAPIController>("Received a CANCEL.");
 			throw new NotImplementedException();
 		}
-				
+						
 		private void Initialize()
 		{
 			var provider = GatewayContext.Payment.GetProviderByKey(Constants.PayTrace.GatewayProviderSettingsKey);

@@ -7,20 +7,23 @@ using System.Threading.Tasks;
 
 namespace Merchello.Providers.Payment.PayTrace.Models
 {
-	/// <summary>
-	/// A Model for working with PayTrace Redirect provider response data
-	/// </summary>
-	public class PayTraceRedirectResponse
+	public class PayTraceRedirectSilentResponse
 	{
-		public string RedirectUrl { get; set; }
+		public bool Success { get; set; }
 
-		public bool Success { get; set; }		
+		public string ResponseMessage { get; set; }
 
 		public string OrderId { get; set; }
 
-		public string Token { get; set; }
+		public string TransactionId { get; set; }
 
-		public string Email { get; set; }
+		public string AppCode { get; set; }
+
+		public string AppMsg { get; set; }
+
+		public string AvsResponse { get; set; }
+
+		public string CscResponse { get; set; }
 	}
 
 	/// <summary>
@@ -28,7 +31,7 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 	/// </summary>
 	[SuppressMessage("StyleCop.CSharp.OrderingRules", "SA1204:StaticElementsMustAppearBeforeInstanceElements", Justification = "Reviewed. Suppression is OK here.")]
 	[SuppressMessage("StyleCop.CSharp.MaintainabilityRules", "SA1402:FileMayOnlyContainASingleClass", Justification = "Reviewed. Suppression is OK here.")]
-	public static class PayTraceRedirectResponseExtensions
+	public static class PayTraceRedirectSilentResponseExtensions
 	{
 		/// <summary>
 		/// Shortcut check of success.
@@ -39,10 +42,10 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 		/// <returns>
 		/// The <see cref="bool"/>.
 		/// </returns>
-		public static bool Success(this PayTraceRedirectResponse response)
+		public static bool Success(this PayTraceRedirectSilentResponse response)
 		{
 			// TODO There will likely be other factors to flagging payment success
-			return response.Success;			
+			return response.Success;
 		}
 	}
 }

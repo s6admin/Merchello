@@ -195,7 +195,7 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 		{
 			var record = payment.GetPayTraceTransactionRecord();
 
-			if (StringExtensions.IsNullOrWhiteSpace(record.Data.CaptureTransactionId))
+			if (StringExtensions.IsNullOrWhiteSpace(record.Data.TransactionId))
 			{
 				var error = new NullReferenceException("PayTrace transaction could not be found and/or deserialized from payment extended data collection");
 				return new PaymentResult(Attempt<IPayment>.Fail(payment, error), invoice, false);
