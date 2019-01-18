@@ -100,46 +100,46 @@ namespace Merchello.Providers
 					}
 				}
 
-				/// <summary>
-				/// Gets the internal token key.
-				/// </summary>
-				internal static string InternalTokenKey
-				{
-					get
-					{
-						return "access_token";
-					}
-				}
+				///// <summary>
+				///// Gets the internal token key.
+				///// </summary>
+				//internal static string InternalTokenKey
+				//{
+				//	get
+				//	{
+				//		return "access_token";
+				//	}
+				//}
 
-				/// <summary>
-				/// Gets the internal payer id key.
-				/// </summary>
-				internal static string InternalPayerIDKey
-				{
-					get
-					{
-						return "internalPayerID";
-					}
-				}
+				///// <summary>
+				///// Gets the internal payer id key.
+				///// </summary>
+				//internal static string InternalPayerIDKey
+				//{
+				//	get
+				//	{
+				//		return "internalPayerID";
+				//	}
+				//}
 
-				/// <summary>
-				/// Gets the internal payment key key.
-				/// </summary>
-				internal static string InternalPaymentKeyKey
-				{
-					get
-					{
-						return "internalPaymentKey";
-					}
-				}
+				///// <summary>
+				///// Gets the internal payment key key.
+				///// </summary>
+				//internal static string InternalPaymentKeyKey
+				//{
+				//	get
+				//	{
+				//		return "internalPaymentKey";
+				//	}
+				//}
 				
-				public static string PayTraceBillingAddress
-				{
-					get
-					{
-						return "billing_address";
-					}
-				}
+				//public static string PayTraceBillingAddress
+				//{
+				//	get
+				//	{
+				//		return "billing_address";
+				//	}
+				//}
 				
 				/// <summary>
 				/// The Billing Address Name.
@@ -229,14 +229,39 @@ namespace Merchello.Providers
 			public static class ResponseKeys
 			{
 
-				public const string ResponseCode = "response_code";
-				public const string TransactionId = "transaction_id";
-				public const string ApprovalCode = "approval_code";
-				public const string ApprovalMessage = "approval_message";
-				public const string AvsResponse = "avs_response";
-				public const string CscResponse = "csc_response";
-				public const string ExternalTransactionid = "external_transaction_id";
-				public const string MaskedCardNumber = "masked_card_number";
+				public const string ResponseCode = "RESPONSECODE";
+				public const string TransactionId = "TRANSACTIONID";
+				public const string ApprovalCode = "APPCODE";
+				public const string ApprovalMessage = "APPMSG";
+				public const string AvsResponse = "AVSRESPONSE";
+				public const string CscResponse = "CSCRESPONSE";
+				//public const string CardName = "CANAME"; // Optional, unused, exclude for now
+				public const string Email = "EMAIL";
+				public const string AuthKey = "AUTHKEY"; // The AUTHKEY value returned as part of a successful PayTrace Redirect.
+
+			}
+
+			// http://help.paytrace.com/how-to-determine-if-a-transaction-has-been-approved			
+			public static class AvsResponses
+			{
+				public const string FULL_EXACT_MATCH = "Full Exact Match";
+				public const string ADDRESS_MATCH_ONLY = "Address Match Only";
+				public const string ZIP_MATCH_ONLY = "Zip Match Only";
+				public const string NO_MATCH = "No Match";
+				public const string ADDRESS_UNAVAILABLE = "Address Unavailable";
+				public const string NON_US_ISSUER = "Non-US Issuer does not participate";
+				public const string ISSUER_SYSTEM_UNAVAILABLE = "Issuer System Unavailable";
+				public const string NOT_A_MAIL_PHONE_ORDER = "Not a Mail/Phone Order";
+				public const string SERVICE_NOT_SUPPORTED = "Service Not Supported";
+			}
+
+			public static class CscResponses
+			{
+				public const string MATCH = "Match";
+				public const string NO_MATCH = "No Match";
+				public const string NOT_PROCESSED = "Not Processed";
+				public const string NOT_PRESENT = "Not Present";
+				public const string ISSUER_DOES_NOT_SUPPORT_CSC = "Issuer Does Not Support CSC";
 			}
 		}
 	}

@@ -110,6 +110,9 @@
 						case "CSCRESPONSE":
 							r.CscResponse = arrPair[1];
 							break;
+						case "EMAIL":
+							r.Email = arrPair[1];
+							break;
 					}
 					
                 }

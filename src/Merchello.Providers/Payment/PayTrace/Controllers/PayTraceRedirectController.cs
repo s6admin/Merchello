@@ -23,6 +23,7 @@ using Newtonsoft.Json;
 using System.Data.SqlTypes;
 using System.Linq;
 using Umbraco.Core;
+using Merchello.Core.Services;
 
 namespace Merchello.Providers.Payment.PayTrace.Controllers
 {
@@ -71,79 +72,28 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 		{
 			
 			PayTraceRedirectResponse r = PayTraceHelper.ParsePayTraceParamList(parmList);
+
+			try
+			{
+				// Get payment and add Token to its ExtendedData, this can only be done here because it is the only place the AuthKey parameter is returned from PayTrace
+				var invoice = GetInvoiceByOrderId(r.OrderId);
+				var payment = invoice.Payments().FirstOrDefault(x => x.Amount == invoice.Total && x.Authorized);
+				var record = payment.GetPayTraceTransactionRecord();
+				record.Data.AUTHKEY = r.Token; // PayTrace AuthKey, which is only passed to success, not the silent response
+
+				payment.SavePayTraceTransactionRecord(record);
+				
+			} catch(Exception ex)
+			{
+				MultiLogHelper.Error<PayTraceRedirectController>(ex.Message, ex);
+			}
+			
 			var redirecting = new PaymentRedirectingUrl("Success") { RedirectingToUrl = _successUrl };
+
+			// TODO Confirm success and redirect
 
 			return Redirect(redirecting.RedirectingToUrl); // Temp for testing to stop capturepayment attempts...Below is all moving to silent response handler method
 
-			//var logData = GetExtendedLoggerData();
-						
-			//try
-			//{
-			//	// Get Invoice from TransactionId which is currently set to the SMO-designed PO Number
-			//	var invoice = GetInvoiceByOrderId(r.OrderId); //GetInvoice(invoiceKey);
-			//	var payment = GetPayment(Guid.Empty);
-				
-			//	// We can now capture the payment
-
-			//	// The PayTrace  gateway requires a callback but PayTrace may not
-			//	// The response data is helpful so that we can refund the payment later through the back office if needed.
-			//	var attempt = invoice.CapturePayment(payment, _paymentMethod, invoice.Total);
-
-			//	// Raise the event to process the email
-			//	Processed.RaiseEvent(new PaymentAttemptEventArgs<IPaymentResult>(attempt), this);
-
-			//	// If this is an AJAX request return the JSON
-			//	//if (payment.ExtendedData.GetPayTraceRequestIsAjaxRequest())
-			//	//{
-			//	//	var resp = new PaymentResultAsyncResponse
-			//	//	{
-			//	//		Success = attempt.Payment.Success,
-			//	//		InvoiceKey = attempt.Invoice.Key,
-			//	//		PaymentKey = attempt.Payment.Result.Key,
-			//	//		PaymentMethodName = "PayTrace Checkout"
-			//	//	};
-
-			//	//	if (attempt.Payment.Exception != null)
-			//	//		resp.Messages.Add(attempt.Payment.Exception.Message);
-
-			//	//	return Json(resp);
-			//	//}
-
-			//	if (attempt.Payment.Success)
-			//	{
-			//		// we need to empty the basket here
-			//		Basket.Empty();
-
-			//		// raise the event so the redirect URL can be manipulated
-			//		RedirectingForSuccess.RaiseEvent(new ObjectEventArgs<PaymentRedirectingUrl>(redirecting), this);
-
-			//		return Redirect(redirecting.RedirectingToUrl);
-			//	}
-				
-			//	// TEMP
-			//	Guid invoiceKey = Guid.Empty;
-			//	Guid paymentKey = Guid.Empty;
-
-			//	var retrying = new PaymentRedirectingUrl("Cancel") { RedirectingToUrl = _cancelUrl };
-			//	var qs = string.Format("?invoicekey={0}&paymentkey={1}", invoiceKey, paymentKey);				
-			//	if(Merchello.Core.StringExtensions.IsNullOrWhiteSpace(retrying.RedirectingToUrl)) return Redirect(retrying.RedirectingToUrl + qs);
-			//	var invalidOp = new InvalidOperationException("Retry url was not specified");
-
-			//	MultiLogHelper.Error<PayTraceRedirectController>("Could not redirect to retry", invalidOp);
-			//	throw invalidOp;
-			//}
-			//catch (Exception ex)
-			//{
-			//	//var extra = new { InvoiceKey = invoiceKey, PaymentKey = paymentKey, Token = token, PayerId = payerId };
-
-			//	//logData.SetValue<object>("extra", extra);
-
-			//	MultiLogHelper.Error<PayTraceRedirectController>(
-			//		"Failed to Capture SUCCESSFUL PayTrace checkout response.",
-			//		ex); /*, logData*/
-
-			//	throw;
-			//}
 		}
 
 		/// <summary>
@@ -169,68 +119,58 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			PayTraceRedirectSilentResponse r = PayTraceHelper.ParsePayTraceSilentParamList(parmList);
 
 			/* 
-				ORDERID
-				TRANSACTIONID
-				APPMSG
-				AVSRESPONSE
-				CSCRESPONSE
-				EMAIL
-				----
-				Optional: CANAME, EXPRMONTH, EXPRYEAR
-
+				ORDERID, TRANSACTIONID,	APPMSG, AVSRESPONSE, CSCRESPONSE, EMAIL				
+				---- Optional: CANAME, EXPRMONTH, EXPRYEAR
 				Example:
-				parmList=ORDERID%7E123456%7CTRANSACTIONID%7E62279788%7CAPPCODE%7ETAS456%7CAPPMSG%7E++NO++MATCH++++++%2D+Approved+and+completed%7CAVSRESPONSE%7ENo+Match%7CCSCRESPONSE%7EMatch%7CEMAIL%7Etest%40test%2Ecom%7C
-			
+				parmList=ORDERID%7E123456%7CTRANSACTIONID%7E62279788%7CAPPCODE%7ETAS456%7CAPPMSG%7E++NO++MATCH++++++%2D+Approved+and+completed%7CAVSRESPONSE%7ENo+Match%7CCSCRESPONSE%7EMatch%7CEMAIL%7Etest%40test%2Ecom%7C			
 			*/
-
-			Console.WriteLine("SILENCE!");
-
+						
 			try
 			{
 				
 				var invoice = GetInvoiceByOrderId(r.OrderId); 
+				
 				var payments = invoice.Payments();
 				if(payments == null || !payments.Any())
 				{
 					// No payments found for processed Invoice, log
 					Exception ex = new Exception("No payments found for Invoice " + r.OrderId + " in PayTrace silent response.");
 					MultiLogHelper.Error(typeof(PayTraceRedirectController), ex.Message, ex);
+					// TODO Business Rules - How to handle remaining checkout?
 					return;
 				}
-				
-				/* 
-					TODO 
-					Schema issue: We can't match an IPayment to a TransactionId b/c the promise Payment is made before the PayTrace Redirect occurs 
-					so this is the first time the website sees a TransactionId.
-				*/
+								
+				var payment = payments.FirstOrDefault(x => x.Amount == invoice.Total && !x.Authorized);
 
-				var payment = payments.FirstOrDefault(); // GetPayment(r.TransactionId);
+				if(payment == null)
+				{
+					Exception ex = new Exception("Could not find payment for Invoice " + invoice.Key + " during PayTrace silent response.");
+					MultiLogHelper.Error<PayTraceRedirectController>(ex.Message, ex);
+					// TODO Business Rules - How to handle remaining checkout?
+					return;	
+				}
+
+				// Add returned values to the existing payment extendedData record				
+				PayTraceRedirectTransactionRecord record = payment.GetPayTraceTransactionRecord();
+				record.Data.ORDERID = r.OrderId;
+				record.Data.APPMSG = r.AppMsg;
+				record.Data.AVSRESPONSE = r.AvsResponse;
+				record.Data.CSCRESPONSE = r.CscResponse;
+				record.Data.EMAIL = r.Email;
+				record.Data.RESPONSEMESSAGE = r.ResponseMessage;
+				//promiseRecord.Data.Token = PayTrace AuthKey is not available in this call so it is saved in the Success handler
+				record.Data.TRANSACTIONID = r.TransactionId;
+
+				payment.SavePayTraceTransactionRecord(record); // Save data changes to ExtendedData
 
 				// We can now capture the payment								
 				// The response data is helpful so that we can refund the payment later through the back office if needed.
-				var attempt = invoice.CapturePayment(payment, _paymentMethod, invoice.Total);
+				var captureAttempt = invoice.CapturePayment(payment, _paymentMethod, invoice.Total);
 
 				// Raise the event to process the email
-				Processed.RaiseEvent(new PaymentAttemptEventArgs<IPaymentResult>(attempt), this);
-
-				// If this is an AJAX request return the JSON
-				//if (payment.ExtendedData.GetPayTraceRequestIsAjaxRequest())
-				//{
-				//	var resp = new PaymentResultAsyncResponse
-				//	{
-				//		Success = attempt.Payment.Success,
-				//		InvoiceKey = attempt.Invoice.Key,
-				//		PaymentKey = attempt.Payment.Result.Key,
-				//		PaymentMethodName = "PayTrace Checkout"
-				//	};
-
-				//	if (attempt.Payment.Exception != null)
-				//		resp.Messages.Add(attempt.Payment.Exception.Message);
-
-				//	return Json(resp);
-				//}
-
-				if (attempt.Payment.Success)
+				Processed.RaiseEvent(new PaymentAttemptEventArgs<IPaymentResult>(captureAttempt), this);
+				
+				if (captureAttempt.Payment.Success)
 				{
 					// we need to empty the basket here
 					Basket.Empty();

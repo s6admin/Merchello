@@ -111,10 +111,9 @@
 			if (!attempt.Payment.Success)
 			{
 				LogHelper.Error(typeof(PayTraceRedirectPaymentController), "AuthorizePayment failed. ", attempt.Payment.Exception);
-				return CurrentUmbracoPage();
-				//return Redirect(attempt.RedirectUrl); // PayTrace must be authorized before implementing the redirect
+				return CurrentUmbracoPage();			
 			}
-
+			
 			CustomerContext.SetValue("invoiceKey", attempt.Invoice.Key.ToString());
 			string redirectUrl = string.Empty;
 			if (attempt.RedirectUrl != null && attempt.RedirectUrl.Length > 0)

@@ -4,8 +4,6 @@ using System.Net;
 using Merchello.Core.Logging;
 using Merchello.Providers.Payment.PayTrace.Models;
 
-//using global::PayTrace;
-
 using Umbraco.Core;
 
 namespace Merchello.Providers.Payment.PayTrace.Services
@@ -49,36 +47,7 @@ namespace Merchello.Providers.Payment.PayTrace.Services
 			ServicePointManager.SecurityProtocol = SecurityProtocolType.Tls12;
 			ServicePointManager.DefaultConnectionLimit = 9999;
 		}
-
-		/// <summary>
-		/// Gets the access token.
-		/// </summary>
-		/// <returns>
-		/// The access token.
-		/// </returns>
-		//protected APIContext GetApiContext()
-		//{
-		//	try
-		//	{
-		//		EnsureSslTslChannel();
-
-		//		var attempt = _settings.GetApiSdkConfig();
-
-		//		if (!attempt.Success) throw attempt.Exception;
-
-		//		var accessToken = new OAuthTokenCredential(_settings.ClientId, _settings.ClientSecret, attempt.Result).GetAccessToken();
-
-		//		return new APIContext(accessToken);
-		//	}
-		//	catch (Exception ex)
-		//	{
-		//		var logData = GetLoggerData();
-		//		MultiLogHelper.Error<PayTraceApiServiceBase>("Failed to create PayTrace APIContext", ex, logData);
-		//		throw;
-		//	}
-
-		//}
-
+		
 		/// <summary>
 		/// Gets the extended logger data.
 		/// </summary>

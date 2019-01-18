@@ -15,6 +15,7 @@ using Umbraco.Core;
 using StringExtensions = Merchello.Core.StringExtensions;
 using Merchello.Providers.Payment.PayTrace.Services;
 using Merchello.Providers.Payment.PayTrace.Models;
+using static Merchello.Providers.Constants.PayTraceRedirect;
 
 namespace Merchello.Providers.Payment.PayTrace.Provider
 {
@@ -93,6 +94,10 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 			payment.Collected = false;
 			payment.Authorized = false; // this is technically not the authorization.  We'll mark this in a later step.
 
+			// S6 Set Billing Name during authorization since its available and so it doesn't need to be fetched during the post-redirect Capture
+			payment.ExtendedData.SetValue(ProcessorArgumentsKeys.BillingAddressName, invoice.BillToName);
+			payment.ExtendedData.SetValue(ExtendedDataKeys.PayTraceTransaction, "1"); // S6 Simply used to help identify the type of data in the payment object on the front-end website 
+			
 			// Have to save here to generate the payment key
 			GatewayProviderService.Save(payment);
 
@@ -102,11 +107,11 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 
 			// Have to save here to persist the record so it can be used in later processing.
 			GatewayProviderService.Save(payment);
-
-			// In this case, we want to do our own Apply Payment operation as the amount has not been collected -
+						
+			// We want to do our own Apply Payment operation as the amount has not been collected -
 			// so we create an applied payment with a 0 amount.  Once the payment has been "collected", another Applied Payment record will
 			// be created showing the full amount and the invoice status will be set to Paid.
-			GatewayProviderService.ApplyPaymentToInvoice(payment.Key, invoice.Key, AppliedPaymentType.Debit, string.Format("To show promise of a {0} payment via PayTrace  Checkout", PaymentMethod.Name), 0);
+			GatewayProviderService.ApplyPaymentToInvoice(payment.Key, invoice.Key, AppliedPaymentType.Debit, string.Format("To show promise of a {0} payment via PayTrace Checkout", PaymentMethod.Name), 0);
 						
 			if (record.Success)
 			{
@@ -152,11 +157,12 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 
 			if (record.Success)
 			{
-				record = _paytraceService.Capture(invoice, payment, amount, isPartialPayment);
+				record = _paytraceService.Capture(invoice, payment, amount, isPartialPayment); // This appears to be a Capture on PayPal's end and returns a transactionId. Nothing applicable to PayTrace so far.
 				payment.SavePayTraceTransactionRecord(record);
 
 				if (record.Success)
-				{
+				{										
+		
 					payment.Collected = (amount + applied) == payment.Amount;
 					payment.Authorized = true;
 
@@ -195,7 +201,7 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 		{
 			var record = payment.GetPayTraceTransactionRecord();
 
-			if (StringExtensions.IsNullOrWhiteSpace(record.Data.TransactionId))
+			if (StringExtensions.IsNullOrWhiteSpace(record.Data.TRANSACTIONID))
 			{
 				var error = new NullReferenceException("PayTrace transaction could not be found and/or deserialized from payment extended data collection");
 				return new PaymentResult(Attempt<IPayment>.Fail(payment, error), invoice, false);

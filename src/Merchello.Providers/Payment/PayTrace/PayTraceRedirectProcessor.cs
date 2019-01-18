@@ -22,10 +22,9 @@
 
 		public PayTraceRedirectTransactionRecord VerifySuccessAuthorziation(IInvoice invoice, IPayment payment)
 		{
-			// We need to process several transactions in a row to get all the data we need to record the
-			// transaction with enough information to do refunds / partial refunds
+		
 			var record = payment.GetPayTraceTransactionRecord();
-			if (record == null || record.SetCheckout == null || record.Data.Token.IsNullOrWhiteSpace())
+			if (record == null || record.SetCheckout == null)
 			{
 				throw new NullReferenceException("PayTrace Redirect Checkout must be setup");
 			}
@@ -34,7 +33,7 @@
 			//record = _service.GetExpressCheckoutDetails(payment, record.Data.Token, record);
 			//if (!record.Success) return record;
 
-			record = Process(payment, _service.DoCheckoutPayment(invoice, payment, record.Data.Token, record));
+			record = Process(payment, _service.DoCheckoutPayment(invoice, payment, record.Data.AUTHKEY, record));
 			if (!record.Success) return record;
 			
 			// This looks like a PayPal specific call because their original response isn't designed to identify success or failure

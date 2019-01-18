@@ -47,9 +47,19 @@ namespace Merchello.Providers.Payment.PayTrace.Services
 			return SetCheckout(invoice, payment, returnUrl, cancelUrl);
 		}
 				
+		// This is a capture for PayPal, so far unnecessary logic for PayTrace Redirect
 		public PayTraceRedirectTransactionRecord Capture(IInvoice invoice, IPayment payment, decimal amount, bool isPartialPayment)
 		{
-			throw new NotImplementedException();
+			var record = payment.GetPayTraceTransactionRecord();
+			try
+			{
+
+			} catch(Exception ex)
+			{
+
+			}
+
+			return record;
 		}
 
 		public PayTraceRedirectResponse Refund(IInvoice invoice, IPayment payment, decimal amount)
@@ -58,22 +68,16 @@ namespace Merchello.Providers.Payment.PayTrace.Services
 		}
 		
 		internal PayTraceRedirectTransactionRecord DoCheckoutPayment(IInvoice invoice, IPayment payment, string token, PayTraceRedirectTransactionRecord record)
-		{
-			// This lets us perform payments directly with the PayTrace Redirect workflow
+		{			
 			try
 			{
-				/*
-				[ ] SendValidationRequest
-				[ ] ParseResponse
-				[ ] UpdateResponse
-				*/
-
+				
 			} catch(Exception ex)
 			{
 				
 			}
 
-			return null; // TODO
+			return record; 
 		}
 
 		/// <summary>

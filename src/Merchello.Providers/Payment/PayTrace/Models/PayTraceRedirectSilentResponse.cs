@@ -24,6 +24,8 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 		public string AvsResponse { get; set; }
 
 		public string CscResponse { get; set; }
+
+		public string Email { get; set; }
 	}
 
 	/// <summary>
