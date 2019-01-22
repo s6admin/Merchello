@@ -26,6 +26,16 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 		public string CscResponse { get; set; }
 
 		public string Email { get; set; }
+
+		public string BillingName { get; set; }
+
+		public string CardType { get; set; }
+
+		public string CardExpireMonth { get; set; }
+
+		public string CardExpireYear { get; set; }
+
+		public string CardLastFour { get; set; }
 	}
 
 	/// <summary>

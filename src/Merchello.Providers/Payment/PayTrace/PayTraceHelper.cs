@@ -12,6 +12,7 @@
 	using System.Threading.Tasks;
 	using System.Web;
 	using Merchello.Core.Logging;
+	using MC = Merchello.Providers;
 
 	public class PayTraceHelper
 	{
@@ -82,36 +83,51 @@
 				arrResponse = strResponse.Split('|'); // split the response into an array of name/ value pairs
 
 				if (arrResponse == null) return r;
-
+				
 				foreach(string s in arrResponse)
 				{
 					arrPair = s.Split('~');
-
+					// ORDERID, TRANSACTIONID, APPMSG, AVSRESPONSE, CSCRESPONSE, EMAIL, BNAME, CARDTYPE, EXPMNTH, EXPYR, LAST4, AMOUNT
 					switch (arrPair[0].ToUpper())
 					{
-						case "ORDERID":
+						case MC.Constants.PayTraceRedirect.ResponseKeys.OrderId:
 							r.OrderId = arrPair[1];
 							break;
-						case "RESPONSE":
-							r.ResponseMessage = arrPair[1];
+						//case "RESPONSE": // This isn't in the list of returns
+						//	r.ResponseMessage = arrPair[1];
+						//	break;
+						case MC.Constants.PayTraceRedirect.ResponseKeys.TransactionId:
+                            r.TransactionId = arrPair[1];
 							break;
-						case "TRANSACTIONID":
-							r.TransactionId = arrPair[1];
+						case MC.Constants.PayTraceRedirect.ResponseKeys.ApprovalCode:
+                            r.AppCode = arrPair[1];
 							break;
-						case "APPCODE":
-							r.AppCode = arrPair[1];
-							break;
-						case "APPMSG":
+						case MC.Constants.PayTraceRedirect.ResponseKeys.ApprovalMessage:
 							r.AppMsg = arrPair[1];
 							break;
-						case "AVSRESPONSE":
-							r.AvsResponse = arrPair[1];
+						case MC.Constants.PayTraceRedirect.ResponseKeys.AvsResponse:
+                            r.AvsResponse = arrPair[1];
 							break;
-						case "CSCRESPONSE":
-							r.CscResponse = arrPair[1];
+						case MC.Constants.PayTraceRedirect.ResponseKeys.CscResponse:
+                            r.CscResponse = arrPair[1];
 							break;
-						case "EMAIL":
-							r.Email = arrPair[1];
+						case MC.Constants.PayTraceRedirect.ResponseKeys.Email:
+                            r.Email = arrPair[1];
+							break;
+						case MC.Constants.PayTraceRedirect.ResponseKeys.BillingName:
+                            r.BillingName = arrPair[1];
+							break;
+						case MC.Constants.PayTraceRedirect.ResponseKeys.CardType:
+                            r.CardType = arrPair[1];
+							break;
+						case MC.Constants.PayTraceRedirect.ResponseKeys.CardExpireMonth:
+                            r.CardExpireMonth = arrPair[1];
+							break;
+						case MC.Constants.PayTraceRedirect.ResponseKeys.CardExpireYear:
+                            r.CardExpireYear = arrPair[1];
+							break;
+						case MC.Constants.PayTraceRedirect.ResponseKeys.CardLastFour:
+                            r.CardLastFour = arrPair[1];
 							break;
 					}
 					
@@ -145,14 +161,14 @@
 
 					switch (arrPair[0].ToUpper())
 					{
-						case "ORDERID":
-							r.OrderId = arrPair[1];
+						case MC.Constants.PayTraceRedirect.ResponseKeys.OrderId:
+                            r.OrderId = arrPair[1];
 							break;
-						case "AUTHKEY":
-							r.Token = arrPair[1];
-							break;						
-						case "EMAIL":
-							r.Email = arrPair[1];
+						case MC.Constants.PayTraceRedirect.ResponseKeys.AuthKey:
+                            r.Token = arrPair[1];
+							break;
+						case MC.Constants.PayTraceRedirect.ResponseKeys.Email:
+                            r.Email = arrPair[1];
 							break;
 					}
 

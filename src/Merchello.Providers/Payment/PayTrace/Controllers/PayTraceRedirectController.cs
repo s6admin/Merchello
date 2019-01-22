@@ -75,13 +75,16 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 
 			try
 			{
-				// Get payment and add Token to its ExtendedData, this can only be done here because it is the only place the AuthKey parameter is returned from PayTrace
-				var invoice = GetInvoiceByOrderId(r.OrderId);
-				var payment = invoice.Payments().FirstOrDefault(x => x.Amount == invoice.Total && x.Authorized);
-				var record = payment.GetPayTraceTransactionRecord();
-				record.Data.AUTHKEY = r.Token; // PayTrace AuthKey, which is only passed to success, not the silent response
+				/* 
+					REMOVED: Client has determined AuthKey is not necessary so we only need to handle the Success redirect
+					Get payment and add AuthKey (Token) to its ExtendedData, this can only be done here because it is the only place the AuthKey parameter is returned from PayTrace
+				*/
+				//var invoice = GetInvoiceByOrderId(r.OrderId);
+				//var payment = invoice.Payments().FirstOrDefault(x => x.Amount == invoice.Total && x.Authorized);
+				//var record = payment.GetPayTraceTransactionRecord();
+				//record.Data.AUTHKEY = r.Token; // PayTrace AuthKey, which is only passed to success, not the silent response
 
-				payment.SavePayTraceTransactionRecord(record);
+				//payment.SavePayTraceTransactionRecord(record);
 				
 			} catch(Exception ex)
 			{
@@ -119,9 +122,11 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			PayTraceRedirectSilentResponse r = PayTraceHelper.ParsePayTraceSilentParamList(parmList);
 
 			/* 
-				ORDERID, TRANSACTIONID,	APPMSG, AVSRESPONSE, CSCRESPONSE, EMAIL				
-				---- Optional: CANAME, EXPRMONTH, EXPRYEAR
-				Example:
+				NOTE: PayTrace example docs are missing some properties. The full param list returned includes:
+
+				ORDERID, TRANSACTIONID,	APPMSG, AVSRESPONSE, CSCRESPONSE, EMAIL, BNAME, CARDTYPE, EXPMNTH, EXPYR, LAST4, AMOUNT
+				
+				PayTrace Doc Example:
 				parmList=ORDERID%7E123456%7CTRANSACTIONID%7E62279788%7CAPPCODE%7ETAS456%7CAPPMSG%7E++NO++MATCH++++++%2D+Approved+and+completed%7CAVSRESPONSE%7ENo+Match%7CCSCRESPONSE%7EMatch%7CEMAIL%7Etest%40test%2Ecom%7C			
 			*/
 						
@@ -153,13 +158,20 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 				// Add returned values to the existing payment extendedData record				
 				PayTraceRedirectTransactionRecord record = payment.GetPayTraceTransactionRecord();
 				record.Data.ORDERID = r.OrderId;
+				record.Data.APPCODE = r.AppCode;
 				record.Data.APPMSG = r.AppMsg;
 				record.Data.AVSRESPONSE = r.AvsResponse;
 				record.Data.CSCRESPONSE = r.CscResponse;
 				record.Data.EMAIL = r.Email;
 				record.Data.RESPONSEMESSAGE = r.ResponseMessage;
+				record.Data.Authorized = true;
+				record.Data.CARDTYPE = r.CardType;
+				record.Data.EXPMNTH = r.CardExpireMonth;
+				record.Data.EXPYR = r.CardExpireYear;
+				record.Data.LAST4 = r.CardLastFour;
+				record.Data.BNAME = r.BillingName;
+				record.Data.TRANSACTIONID = r.TransactionId;				
 				//promiseRecord.Data.Token = PayTrace AuthKey is not available in this call so it is saved in the Success handler
-				record.Data.TRANSACTIONID = r.TransactionId;
 
 				payment.SavePayTraceTransactionRecord(record); // Save data changes to ExtendedData
 

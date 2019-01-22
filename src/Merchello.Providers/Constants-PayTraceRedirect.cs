@@ -229,15 +229,20 @@ namespace Merchello.Providers
 			public static class ResponseKeys
 			{
 
+				public const string OrderId = "ORDERID";
 				public const string ResponseCode = "RESPONSECODE";
 				public const string TransactionId = "TRANSACTIONID";
 				public const string ApprovalCode = "APPCODE";
 				public const string ApprovalMessage = "APPMSG";
 				public const string AvsResponse = "AVSRESPONSE";
 				public const string CscResponse = "CSCRESPONSE";
-				//public const string CardName = "CANAME"; // Optional, unused, exclude for now
+				public const string CardType = "CARDTYPE"; // Optional, unused, exclude for now
 				public const string Email = "EMAIL";
 				public const string AuthKey = "AUTHKEY"; // The AUTHKEY value returned as part of a successful PayTrace Redirect.
+				public const string CardExpireMonth = "EXPMNTH";
+				public const string CardExpireYear = "EXPYR";
+				public const string CardLastFour = "LAST4";
+				public const string BillingName = "BNAME";
 
 			}
 
