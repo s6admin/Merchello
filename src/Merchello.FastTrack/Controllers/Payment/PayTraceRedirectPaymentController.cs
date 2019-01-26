@@ -87,10 +87,16 @@
 				var ex = new NullReferenceException("PaymentMethod was null");
 				return HandlePaymentException(model, ex);
 			}
+						
+			/*
+				Redirect Providers MUST keep their basket contents until after payment is complete otherwise the checkout
+				workflow will break if the customer navigates backwards or their payment fails
+			*/
+			CheckoutManager.Context.Settings.EmptyBasketOnPaymentSuccess = false;
 
 			// Rebuild model to capture Billing Address/Email details which are otherwise lost after the call to AuthorizePayment below
-			model = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod); 
-			
+			model = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod);
+
 			/* 
 				S6
 				The default redirect provider implementation has a logic problem where the AuthorizePayment methods call OnFinalizing which
@@ -102,7 +108,7 @@
 
 				We need to implement our own AuthorizePayment that avoids this Finalizing call
 			*/
-
+					
 			// Create zero dollar payment (promise of) so an Invoice Id is generated and can be provided to the PayTrace redirect page
 			var attempt = CheckoutManager.Payment.AuthorizePayment(paymentMethod.Key, null, false); // S6 custom AuthorizePayment that doesn't force OnFinalizing()
 			var resultModel = CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod, attempt);
