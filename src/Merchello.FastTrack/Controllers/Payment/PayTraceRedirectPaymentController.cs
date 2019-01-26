@@ -33,6 +33,7 @@
 	using Providers.Payment.PayTrace;
 
 	// S6 This is used for the PayTrace Redirect payment methods, not the Client-side Encryption JSON payment methods
+	// NOTE: The PayPal Express Checkout controller is located in Merchello.Web.Store.Controllers.Payment, not here in Merchello.FastTrack.Controllers.Payment like the other providers?
 	[PluginController("FastTrack")]
 	[GatewayMethodUi("PayTrace.RedirectCheckout")]
 	public class PayTraceRedirectPaymentController : CheckoutPaymentControllerBase<PayTraceRedirectPaymentModel>
@@ -68,18 +69,6 @@
 
 			// Set any eComm or CMS properties we don't want to scope into the PayTrace Factory
 
-			// There is no reason to prep the invoice here because the rendered payment form for PayTrace Redirect doesn't display any specific values. Prep after the customer clicks the form button
-			//IInvoice invoice = PrepareInvoiceOnce();
-			//if (invoice != null)
-			//{
-			//	model.Amount = decimal.ToDouble(invoice.Total);
-			//	model.TaxAmount = invoice.TotalTax();
-			//	if(invoice.PoNumber != null && invoice.PoNumber.Length > 0)
-			//	{
-			//		model.OrderNumber = invoice.PoNumber;
-			//	}			
-			//}
-
 			return view.IsNullOrWhiteSpace() ? this.PartialView(model) : this.PartialView(view, model);
 		}
 
@@ -101,11 +90,21 @@
 
 			// Rebuild model to capture Billing Address/Email details which are otherwise lost after the call to AuthorizePayment below
 			model = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod); 
+			
+			/* 
+				S6
+				The default redirect provider implementation has a logic problem where the AuthorizePayment methods call OnFinalizing which
+				in turn calls a series of Reset() methods in the CheckoutManager. This means that as the invoice is initially created before
+				redirecting to the payment provider some required customer data is deleted even though the checkout isn't finished. If the 
+				customer redirect payment fails or they navigate back via their browser, the checkout errors because of the missing data.
+				Similar issue/resolution is here:
+				https://our.umbraco.com/packages/collaboration/merchello/merchello/81312-retain-shipping-address-after-redirect
 
-			CheckoutManager.Context.Settings.EmptyBasketOnPaymentSuccess = false;
+				We need to implement our own AuthorizePayment that avoids this Finalizing call
+			*/
 
 			// Create zero dollar payment (promise of) so an Invoice Id is generated and can be provided to the PayTrace redirect page
-			var attempt = CheckoutManager.Payment.AuthorizePayment(paymentMethod.Key); // S6 Args for PayTrace can also be included if needed
+			var attempt = CheckoutManager.Payment.AuthorizePayment(paymentMethod.Key, null, false); // S6 custom AuthorizePayment that doesn't force OnFinalizing()
 			var resultModel = CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod, attempt);
 			
 			if (!attempt.Payment.Success)
@@ -125,14 +124,6 @@
 				redirectUrl = ValidatePayUrl;
 			}
 			
-			// TODO Implement if PayTrace has a similar cancel option
-			//if (!model.ViewData.Success)
-			//{
-			//	var invoiceKey = attempt.Invoice.Key;
-			//	var paymentKey = attempt.Payment.Result != null ? attempt.Payment.Result.Key : Guid.Empty;
-			//	//EnsureDeleteInvoiceOnCancel(invoiceKey, paymentKey); // Available in PayPalExpressPaymentController
-			//}
-
 			if (attempt.Invoice != null)
 			{
 				model.Amount = decimal.ToDouble(attempt.Invoice.Total);
@@ -144,16 +135,7 @@
 					model.OrderNumber = attempt.Invoice.PoNumber;
 				}
 			}
-
-			#region S6 based on JSON Encrypted PayTrace Provider
-
-			//model = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod);
-
-			//IInvoice invoice = PrepareInvoiceOnce();
-
-
-			#endregion S6 
-
+			
 			var settings = PayTraceHelper.GetProviderSettings();			
 			
 			//format parameters for request 
@@ -230,7 +212,7 @@
 				return CurrentUmbracoPage();
 			}
 		}
-
+		
 		/// <summary>
 		/// Sends the validation request to PayTrace.
 		/// </summary>

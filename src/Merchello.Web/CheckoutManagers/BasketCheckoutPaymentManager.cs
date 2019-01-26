@@ -65,7 +65,40 @@
             return paymentMethodKey.Equals(Guid.Empty) || paymentMethod == null ? null : paymentMethod.PaymentMethod;
         }
 
-        /// <summary>
+		/// <summary>
+		/// S6 A clone method of AuthorizePayment but that doesn't force OnFinalizing(). Use this method for initial calls to redirect payment providers so the CheckoutManager isn't automatically reset before the redirect payment is completed.
+		/// </summary>
+		/// <param name="paymentMethodKey">The <see cref="IPaymentMethod"/> key</param>
+		/// <param name="args">The arguments.</param>
+		/// <param name="finalize">if set to <c>true</c> [finalize].</param>
+		/// <returns></returns>
+		public override IPaymentResult AuthorizePayment(Guid paymentMethodKey, ProcessorArgumentCollection args = null, bool finalize = false)
+		{
+			if (!this.IsReadyToInvoice()) return new PaymentResult(Attempt<IPayment>.Fail(new InvalidOperationException("SalesPreparation is not ready to invoice")), null, false);
+
+			// invoice
+			var invoice = this.PrepareInvoice(this.InvoiceBuilder);
+
+			this.Context.Services.InvoiceService.Save(invoice);
+
+			// If optional args aren't specified send an empty collection which is expected
+			if(args == null)
+			{
+				args = new ProcessorArgumentCollection();
+            }
+
+			var result = invoice.AuthorizePayment(paymentMethodKey, args);
+
+			if (result.Payment.Success && this.Context.Settings.EmptyBasketOnPaymentSuccess) this.Context.Customer.Basket().Empty();
+			if (finalize)
+			{
+				this.OnFinalizing(result);
+			}			
+
+			return result;
+		}	
+
+		/// <summary>
         /// Attempts to process a payment
         /// </summary>
         /// <param name="paymentGatewayMethod">The <see cref="IPaymentGatewayMethod"/> to use in processing the payment</param>

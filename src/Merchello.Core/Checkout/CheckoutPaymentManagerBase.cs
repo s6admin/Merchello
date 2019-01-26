@@ -137,13 +137,22 @@
         /// </returns>
         public abstract IPaymentMethod GetPaymentMethod();
 
-        /// <summary>
-        /// Attempts to process a payment
-        /// </summary>
-        /// <param name="paymentGatewayMethod">The <see cref="IPaymentGatewayMethod"/> to use in processing the payment</param>
-        /// <param name="args">Additional arguments required by the payment processor</param>
-        /// <returns>The <see cref="IPaymentResult"/></returns>
-        public abstract IPaymentResult AuthorizePayment(IPaymentGatewayMethod paymentGatewayMethod, ProcessorArgumentCollection args);
+		/// <summary>
+		/// S6 Attempts to process a payment with the option to skip OnFinalizing() call which forces the CheckoutManager to reset
+		/// </summary>
+		/// <param name="paymentMethodKey">The <see cref="IPaymentMethod"/> key</param>
+		/// <param name="args">Additional arguments required by the payment processor</param>
+		/// <param name="finalize">Flag whether or not to call OnFinalizing() after payment authorization</param>
+		/// <returns>The <see cref="IPaymentResult"/></returns>
+		public abstract IPaymentResult AuthorizePayment(Guid paymentMethodKey, ProcessorArgumentCollection args = null, bool finalize = false);
+
+		/// <summary>
+		/// Attempts to process a payment
+		/// </summary>
+		/// <param name="paymentGatewayMethod">The <see cref="IPaymentGatewayMethod"/> to use in processing the payment</param>
+		/// <param name="args">Additional arguments required by the payment processor</param>
+		/// <returns>The <see cref="IPaymentResult"/></returns>
+		public abstract IPaymentResult AuthorizePayment(IPaymentGatewayMethod paymentGatewayMethod, ProcessorArgumentCollection args);
 
         /// <summary>
         /// Attempts to process a payment

@@ -60,13 +60,23 @@
         /// </returns>
         IPaymentMethod GetPaymentMethod();
 
-        /// <summary>
-        /// Attempts to process a payment
-        /// </summary>
-        /// <param name="paymentGatewayMethod">The <see cref="IPaymentGatewayMethod"/> to use in processing the payment</param>
-        /// <param name="args">Additional arguments required by the payment processor</param>
-        /// <returns>The <see cref="IPaymentResult"/></returns>
-        IPaymentResult AuthorizePayment(IPaymentGatewayMethod paymentGatewayMethod, ProcessorArgumentCollection args);
+
+		/// <summary>
+		/// Attempts to process a payment
+		/// </summary>
+		/// <param name="paymentMethodKey">The <see cref="IPaymentMethod"/> key</param>
+		/// <param name="args">Additional arguments required by the payment processor</param>
+		/// <param name="finalize">A flag indicating whether or not to call OnFinalizing after payment authorization</param>
+		/// <returns>The <see cref="IPaymentResult"/></returns>
+		IPaymentResult AuthorizePayment(Guid paymentMethodKey, ProcessorArgumentCollection args = null, bool finalize = false);
+
+		/// <summary>
+		/// Attempts to process a payment
+		/// </summary>
+		/// <param name="paymentGatewayMethod">The <see cref="IPaymentGatewayMethod"/> to use in processing the payment</param>
+		/// <param name="args">Additional arguments required by the payment processor</param>
+		/// <returns>The <see cref="IPaymentResult"/></returns>
+		IPaymentResult AuthorizePayment(IPaymentGatewayMethod paymentGatewayMethod, ProcessorArgumentCollection args);
 
         /// <summary>
         /// Attempts to process a payment

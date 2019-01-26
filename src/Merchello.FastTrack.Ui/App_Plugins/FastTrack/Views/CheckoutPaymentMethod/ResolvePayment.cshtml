@@ -18,6 +18,14 @@
             break;
         case "PurchaseOrder.PurchaseOrder":
             @Html.Action("PaymentForm", "PurchaseOrderPayment", new { area = "FastTrack" })
-            break;
-    }
+			break;
+		@* S6 PayTrace *@
+		case "PayTrace.PurchaseOrder":
+			@Html.Action("PaymentForm", "PayTracePayment", new { area = "FastTrack" })
+			break;
+			@* S6 PayTrace Redirect*@
+		case "PayTrace.RedirectCheckout":
+			@Html.Action("PaymentForm", "PayTraceRedirectPayment", new { area = "FastTrack" })
+				break;
+	}
 }
