@@ -80,8 +80,8 @@
 		[ValidateAntiForgeryToken]
 		public ActionResult HandlePaymentForm(PayTraceRedirectPaymentModel model)
 		{
-	
-			var paymentMethod = this.CheckoutManager.Payment.GetPaymentMethod();
+			
+            var paymentMethod = this.CheckoutManager.Payment.GetPaymentMethod();
 			if (paymentMethod == null)
 			{
 				var ex = new NullReferenceException("PaymentMethod was null");
@@ -95,7 +95,7 @@
 			CheckoutManager.Context.Settings.EmptyBasketOnPaymentSuccess = false;
 
 			// Rebuild model to capture Billing Address/Email details which are otherwise lost after the call to AuthorizePayment below
-			model = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod);
+			model = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod); // This might be unnecessary now that OnFinalizing() call has been omitted
 
 			/* 
 				S6
@@ -108,7 +108,9 @@
 
 				We need to implement our own AuthorizePayment that avoids this Finalizing call
 			*/
-					
+
+			string successUrl = System.Configuration.ConfigurationManager.AppSettings["payTraceSuccessUrl"]; // TODO MC.PayTraceRedirect.AppSettingKeys		
+
 			// Create zero dollar payment (promise of) so an Invoice Id is generated and can be provided to the PayTrace redirect page
 			var attempt = CheckoutManager.Payment.AuthorizePayment(paymentMethod.Key, null, false); // S6 custom AuthorizePayment that doesn't force OnFinalizing()
 			var resultModel = CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod, attempt);
@@ -159,7 +161,8 @@
 			// TODO Pull them from the PayTraceRedirectProviderSettings if within scope		
 			parameters += "ApproveURL~" + settings.SuccessUrl + "|";
 			parameters += "DeclineURL~" + settings.DeclinedUrl + "|"; // If declined, send customer back to payment page otherwise create a custom landing page with a declined message
-			
+			parameters += "ReturnURL~" + settings.SilentResponseUrl + "|"; // SilentUrl isn't permitted as a url parameter but documentation says ReturnUrl is an alternate target for the silet POST if one isn't specified in the PayTrace manager dashboard
+
 			string url = SendValidationRequest(parameters);
 
 			if(url.Length > 0 && url.StartsWith("https://paytrace.com/"))
@@ -192,7 +195,7 @@
 				#endregion Optional Parameters Reference
 				string op = string.Empty;
 
-				// TODO Validate optional parameter url-encoding
+				
 				op += "BNAME~" + WebUtility.UrlEncode(model.BillingAddress.Name) + "|";
 				op += "BADDRESS~" + WebUtility.UrlEncode(model.BillingAddress.StreetAddress) + "|";
 				op += "BADDRESS2~" + WebUtility.UrlEncode(model.BillingAddress.StreetAddress2) + "|";

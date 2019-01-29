@@ -74,7 +74,7 @@
 		/// <returns></returns>
 		public override IPaymentResult AuthorizePayment(Guid paymentMethodKey, ProcessorArgumentCollection args = null, bool finalize = false)
 		{
-			if (!this.IsReadyToInvoice()) return new PaymentResult(Attempt<IPayment>.Fail(new InvalidOperationException("SalesPreparation is not ready to invoice")), null, false);
+			if (!this.IsReadyToInvoice()) return new PaymentResult(Attempt<IPayment>.Fail(new InvalidOperationException("Not ready to invoice.")), null, false);
 
 			// invoice
 			var invoice = this.PrepareInvoice(this.InvoiceBuilder);

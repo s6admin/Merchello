@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Configuration;
 
 namespace Merchello.Providers.Payment.PayTrace.Models
 {
@@ -31,7 +32,7 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 		private const string DefaultQueryString = "?invoiceKey={1}&paymentKey={2}";
 
 		public PayTraceRedirectProviderSettings()
-		{
+		{			
 			var siteUrl = PayTraceHelper.GetBaseWebsiteUrl();
             SuccessUrl = string.Format(DefaultReturnUrl, siteUrl);
 			CancelUrl = string.Format(DefaultCancelUrl, siteUrl); 

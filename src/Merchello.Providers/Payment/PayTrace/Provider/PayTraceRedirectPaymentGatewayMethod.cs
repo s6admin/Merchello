@@ -58,6 +58,11 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 			throw new NotImplementedException();
 		}
 
+		public override IPaymentResult AuthorizePayment(IInvoice invoice, ProcessorArgumentCollection args)
+		{
+			return base.AuthorizePayment(invoice, args);
+		}
+
 		/// <summary>
 		/// Performs the AuthorizePayment operation.
 		/// </summary>
