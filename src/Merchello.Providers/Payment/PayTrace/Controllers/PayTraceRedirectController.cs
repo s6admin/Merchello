@@ -24,6 +24,9 @@ using System.Data.SqlTypes;
 using System.Linq;
 using Umbraco.Core;
 using Merchello.Core.Services;
+using Merchello.Core.Checkout;
+using Merchello.Web;
+using Merchello.Web.Models.SaleHistory;
 
 namespace Merchello.Providers.Payment.PayTrace.Controllers
 {
@@ -54,6 +57,9 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 		/// </summary>
 		public static event TypedEventHandler<PayTraceRedirectController, ObjectEventArgs<PaymentRedirectingUrl>> RedirectingForCancel;
 
+		// S6 So OnFinalizing can be broadcast after a redirect payment has been successfully detected
+		public static event TypedEventHandler<CheckoutPaymentManagerBase, CheckoutEventArgs<IPaymentResult>> Finalizing;
+
 		/// <summary>
 		/// Occurs after the final redirection and before redirecting to the success URL
 		/// </summary>
@@ -72,6 +78,17 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 		{
 			
 			PayTraceRedirectResponse r = PayTraceHelper.ParsePayTraceParamList(parmList);
+
+			Console.WriteLine(Basket);
+
+			// Reset the Customer's Basket and CheckoutManager data
+			Basket.Empty();
+			var checkoutManager = Basket.GetCheckoutManager();
+			checkoutManager.Customer.Reset();
+			checkoutManager.Offer.Reset();
+			checkoutManager.Extended.Reset();
+			checkoutManager.Payment.Reset();
+			checkoutManager.Shipping.Reset();
 
 			try
 			{
@@ -118,6 +135,8 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 		// The Url hooked by the PayTrace Redirect silent response
 		public void PayTraceSilentResponse(string parmList)
 		{
+			// NOTE: Customer/Basket contexts are out of scope here so any actions related to checkout don't do anything. Use Success() instead for tasks like reseting CheckoutManager and the basket.
+			// Invoice and/or database tasks should still be performed
 
 			PayTraceRedirectSilentResponse r = PayTraceHelper.ParsePayTraceSilentParamList(parmList);
 
@@ -154,7 +173,7 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 					// TODO Business Rules - How to handle remaining checkout?
 					return;	
 				}
-
+								
 				// Add returned values to the existing payment extendedData record				
 				PayTraceRedirectTransactionRecord record = payment.GetPayTraceTransactionRecord();
 				record.Data.ORDERID = r.OrderId;
@@ -181,12 +200,45 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 
 				// Raise the event to process the email
 				Processed.RaiseEvent(new PaymentAttemptEventArgs<IPaymentResult>(captureAttempt), this);
-				
+
 				if (captureAttempt.Payment.Success)
 				{
-					// we need to empty the basket here
-					Basket.Empty();
-				}												
+
+					//Basket.Empty();
+
+					#region S6 OnFinalizing()
+
+					// Faux OnFinalizing() to emulate Merchello.Web/UmbracoApplicationEventHandler.cs#L439 because our custom AuthorizePayment method prevented the default eComm event from firing when the customer initiated a redirect payment
+
+					captureAttempt.Invoice.AuditCreated();
+
+					if (captureAttempt.Payment.Success)
+					{
+						// Reset the Customer's CheckoutManager
+						//var checkoutManager = Basket.GetCheckoutManager();
+						//checkoutManager.Customer.Reset();
+						//checkoutManager.Offer.Reset();
+						//checkoutManager.Extended.Reset();
+						//checkoutManager.Payment.Reset();
+						//checkoutManager.Shipping.Reset();
+
+						if (captureAttempt.Invoice.InvoiceStatusKey == Core.Constants.DefaultKeys.InvoiceStatus.Paid)
+						{
+							captureAttempt.Payment.Result.AuditPaymentCaptured(captureAttempt.Payment.Result.Amount);
+						}
+						else
+						{
+							captureAttempt.Payment.Result.AuditPaymentAuthorize(captureAttempt.Invoice);
+						}
+					}
+					else
+					{
+						captureAttempt.Payment.Result.AuditPaymentDeclined();
+					}
+
+					#endregion S6 OnFinalizing()
+
+				}
 			}
 			catch (Exception ex)
 			{

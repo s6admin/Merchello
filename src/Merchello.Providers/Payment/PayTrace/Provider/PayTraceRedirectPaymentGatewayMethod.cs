@@ -130,6 +130,11 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 			return new PaymentResult(Attempt<IPayment>.Fail(payment, ex), invoice, false);
 		}
 
+		public string GetPaymentReferenceNumber(IInvoice invoice)
+		{
+			return PaymentMethod.PaymentCode + "-" + invoice.PrefixedInvoiceNumber();
+		}
+
 		/// <summary>
 		/// Performs the capture payment operation.
 		/// </summary>

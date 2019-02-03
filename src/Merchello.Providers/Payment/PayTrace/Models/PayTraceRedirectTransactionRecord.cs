@@ -79,7 +79,7 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 		/// </returns>
 		public static PayTraceRedirectTransactionRecord GetPayTraceTransactionRecord(this IPayment payment)
 		{
-			return payment.ExtendedData.GetValue<PayTraceRedirectTransactionRecord>(Constants.PayTrace.ExtendedDataKeys.PayTraceRedirectTransactionRecord);
+			return payment.ExtendedData.GetValue<PayTraceRedirectTransactionRecord>(Constants.PayTraceRedirect.ExtendedDataKeys.PayTraceTransaction);
 		}
 
 		/// <summary>
@@ -93,7 +93,7 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 		/// </param>
 		public static void SavePayTraceTransactionRecord(this IPayment payment, PayTraceRedirectTransactionRecord record)
 		{
-			payment.ExtendedData.SetValue(Constants.PayTrace.ExtendedDataKeys.PayTraceRedirectTransactionRecord, record);
+			payment.ExtendedData.SetValue(Constants.PayTraceRedirect.ExtendedDataKeys.PayTraceTransaction, record);			
 		}
 	}
 }

@@ -38,7 +38,7 @@
         /// The event arguments.
         /// </param>
         private void PayPalExpressControllerProcessed(PayPalExpressController sender, PaymentAttemptEventArgs<IPaymentResult> e)
-        {
+        {			
             var attempt = e.Entity;
             if (attempt.Payment.Success)
             {
