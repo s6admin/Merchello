@@ -59,7 +59,7 @@ namespace Merchello.Providers
 				/// <summary>
 				/// A counter for keeping track of failed payment attempts. This is for website use only and is not an official PayTrace property.
 				/// </summary>
-				public const string FailedAttempts = "FailedPayTracePaymentAttempts";
+				public const string FailedAttempts = "FailedPayTraceRedirectPaymentAttempts";
 			}
 
 			/// <summary>

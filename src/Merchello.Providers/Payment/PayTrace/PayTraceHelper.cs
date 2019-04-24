@@ -101,15 +101,20 @@
 							break;
 						case MC.Constants.PayTraceRedirect.ResponseKeys.ApprovalCode:
                             r.AppCode = arrPair[1];
+							// The primary inticator of a successful payment in the silent response scope is the presence of an AppCode value
+							if (!r.AppCode.IsNullOrWhiteSpace())
+							{
+								r.Success = true;
+							}
 							break;
 						case MC.Constants.PayTraceRedirect.ResponseKeys.ApprovalMessage:
 							r.AppMsg = arrPair[1];
 							break;
 						case MC.Constants.PayTraceRedirect.ResponseKeys.AvsResponse:
-                            r.AvsResponse = arrPair[1];
+                            r.AvsResponse = arrPair[1];	
 							break;
 						case MC.Constants.PayTraceRedirect.ResponseKeys.CscResponse:
-                            r.CscResponse = arrPair[1];
+                            r.CscResponse = arrPair[1];							
 							break;
 						case MC.Constants.PayTraceRedirect.ResponseKeys.Email:
                             r.Email = arrPair[1];
@@ -141,6 +146,7 @@
 			return r;
 		}
 
+		// Success and Declined return urls
 		public static PayTraceRedirectResponse ParsePayTraceParamList(string strResponse)
 		{
 			PayTraceRedirectResponse r = new PayTraceRedirectResponse();
@@ -170,6 +176,7 @@
 						case MC.Constants.PayTraceRedirect.ResponseKeys.Email:
                             r.Email = arrPair[1];
 							break;
+
 					}
 
 				}

@@ -8,6 +8,7 @@ using Merchello.Core.Gateways;
 using Merchello.Core.Gateways.Payment;
 using Merchello.Core.Logging;
 using Merchello.Core.Models;
+using MC = Merchello.Providers.Constants;
 using Merchello.Providers.Models;
 using Merchello.Providers.Payment.PayTrace.Models;
 using Merchello.Providers.Payment.PayTrace.Provider;
@@ -27,6 +28,7 @@ using Merchello.Core.Services;
 using Merchello.Core.Checkout;
 using Merchello.Web;
 using Merchello.Web.Models.SaleHistory;
+using Umbraco.Core.Logging;
 
 namespace Merchello.Providers.Payment.PayTrace.Controllers
 {
@@ -38,7 +40,8 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 	{
 		private IPayTraceRedirectService _paytraceService;
 		private string _successUrl;
-		private string _cancelUrl;
+		//private string _cancelUrl; // Removed PayTrace does not have a "cancel" concept
+		private string _declinedUrl;
 		private bool _deleteInvoiceOnCancel;
 		private PayTraceRedirectPaymentGatewayMethod _paymentMethod;
 
@@ -78,61 +81,78 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 		{
 			
 			PayTraceRedirectResponse r = PayTraceHelper.ParsePayTraceParamList(parmList);
+			
+			//ResetAllCheckoutData(); // TODO S6 This happening too soon..it causes the CustomerContext to be scrubbed before SalesReceipt. At least CustomerContext invoiceKey needs to be preserved
 
-			Console.WriteLine(Basket);
+			//try
+			//{
+			//	/* 
+			//		REMOVED: Client has determined AuthKey is not necessary so we only need to handle the Success redirect
+			//		Get payment and add AuthKey (Token) to its ExtendedData, this can only be done here because it is the only place the AuthKey parameter is returned from PayTrace
+			//	*/
+			//	//var invoice = GetInvoiceByOrderId(r.OrderId);
+			//	//var payment = invoice.Payments().FirstOrDefault(x => x.Amount == invoice.Total && x.Authorized);
+			//	//var record = payment.GetPayTraceTransactionRecord();
+			//	//record.Data.AUTHKEY = r.Token; // PayTrace AuthKey, which is only passed to success, not the silent response
 
-			// Reset the Customer's Basket and CheckoutManager data
-			Basket.Empty();
-			var checkoutManager = Basket.GetCheckoutManager();
-			checkoutManager.Customer.Reset();
-			checkoutManager.Offer.Reset();
-			checkoutManager.Extended.Reset();
-			checkoutManager.Payment.Reset();
-			checkoutManager.Shipping.Reset();
+			//	//payment.SavePayTraceTransactionRecord(record);
+				
+			//} catch(Exception ex)
+			//{
+			//	MultiLogHelper.Error<PayTraceRedirectController>(ex.Message, ex);
+			//}
+			
+			var redirecting = new PaymentRedirectingUrl("Success") { RedirectingToUrl = _successUrl };
+			
+			return Redirect(redirecting.RedirectingToUrl); 
+		}
+
+		public override ActionResult Declined(string parmList)
+		{
+			/*
+			/declined?parmList=OrderID~2019020504440768%7CAuthKey~7487400%7CEMAIL~test%40test%2Etest%7C
+			*/
+
+			PayTraceRedirectResponse r = PayTraceHelper.ParsePayTraceParamList(parmList);
+
+			// _declinedUrl is available, but _successUrl is set to Receipt page by default which will still be shown to customers after a decline but with additional details about their unpaid order
+			var redirecting = new PaymentRedirectingUrl("Declined") { RedirectingToUrl = _successUrl }; 
 
 			try
 			{
-				/* 
-					REMOVED: Client has determined AuthKey is not necessary so we only need to handle the Success redirect
-					Get payment and add AuthKey (Token) to its ExtendedData, this can only be done here because it is the only place the AuthKey parameter is returned from PayTrace
-				*/
-				//var invoice = GetInvoiceByOrderId(r.OrderId);
-				//var payment = invoice.Payments().FirstOrDefault(x => x.Amount == invoice.Total && x.Authorized);
-				//var record = payment.GetPayTraceTransactionRecord();
-				//record.Data.AUTHKEY = r.Token; // PayTrace AuthKey, which is only passed to success, not the silent response
-
-				//payment.SavePayTraceTransactionRecord(record);
-				
-			} catch(Exception ex)
-			{
-				MultiLogHelper.Error<PayTraceRedirectController>(ex.Message, ex);
+				var invoice = GetInvoiceByOrderId(r.OrderId);		
+				var payment = invoice.Payments().FirstOrDefault();
+				Guid methodKey = payment.PaymentMethodKey ?? Guid.Empty; // VoidPayment() requires a non-nullable Guid
+				if (!methodKey.Equals(Guid.Empty))
+				{
+					//payment.VoidPayment(invoice, methodKey);
+				}				
 			}
-			
-			var redirecting = new PaymentRedirectingUrl("Success") { RedirectingToUrl = _successUrl };
+			catch (Exception ex)
+			{
+				LogHelper.Error(typeof(PayTraceRedirectController), ex.Message, ex);
+			}
 
-			// TODO Confirm success and redirect
+			// Keep track of the failed attempts in the Customer data so the next checkout step is aware of the payment failure(s)
+			int attempts = 1;
+			ExtendedDataCollection ed = CurrentCustomer.ExtendedData; // TODO Ensure this is the correct context
 
-			return Redirect(redirecting.RedirectingToUrl); // Temp for testing to stop capturepayment attempts...Below is all moving to silent response handler method
+			// Retrieve previous saved value if it exists
+			if (ed.ContainsKey(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts))
+			{
+				int.TryParse(ed.GetValue(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts), out attempts); // Retrieve previous value
+				attempts = attempts + 1; // Increment previous value				
+			}
 
+			ed.SetValue(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts, attempts.ToString());
+			ViewData[MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts] = attempts;
+
+			ResetAllCheckoutData();
+
+			return Redirect(redirecting.RedirectingToUrl);
 		}
 
-		/// <summary>
-		/// Handles a cancellation response from the PayTrace Redirect transaction
-		/// </summary>
-		/// <param name="invoiceKey">The invoice key.</param>
-		/// <param name="paymentKey">The payment key.</param>
-		/// <param name="token">The token.</param>
-		/// <param name="payerId">The payer id.</param>
-		/// <returns>
-		/// The <see cref="ActionResult" />.
-		/// </returns>
-		/// <exception cref="System.NotImplementedException"></exception>
-		public override ActionResult Cancel(Guid invoiceKey, Guid paymentKey, string token, string payerId = null)
-		{
-			throw new NotImplementedException();
-		}
-
-		// The Url hooked by the PayTrace Redirect silent response
+		// The Url hooked by the PayTrace Redirect silent response (in ALL success or fail cases)
 		public void PayTraceSilentResponse(string parmList)
 		{
 			// NOTE: Customer/Basket contexts are out of scope here so any actions related to checkout don't do anything. Use Success() instead for tasks like reseting CheckoutManager and the basket.
@@ -151,7 +171,7 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 						
 			try
 			{
-				
+				// Record all PayTrace response values regardless of payment success/failure
 				var invoice = GetInvoiceByOrderId(r.OrderId); 
 				
 				var payments = invoice.Payments();
@@ -159,18 +179,17 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 				{
 					// No payments found for processed Invoice, log
 					Exception ex = new Exception("No payments found for Invoice " + r.OrderId + " in PayTrace silent response.");
-					MultiLogHelper.Error(typeof(PayTraceRedirectController), ex.Message, ex);
-					// TODO Business Rules - How to handle remaining checkout?
+					MultiLogHelper.Error(typeof(PayTraceRedirectController), ex.Message, ex);					
 					return;
 				}
 								
+				// Retrieve initial promise payment
 				var payment = payments.FirstOrDefault(x => x.Amount == invoice.Total && !x.Authorized);
 
 				if(payment == null)
 				{
 					Exception ex = new Exception("Could not find payment for Invoice " + invoice.Key + " during PayTrace silent response.");
-					MultiLogHelper.Error<PayTraceRedirectController>(ex.Message, ex);
-					// TODO Business Rules - How to handle remaining checkout?
+					MultiLogHelper.Error<PayTraceRedirectController>(ex.Message, ex);					
 					return;	
 				}
 								
@@ -189,64 +208,57 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 				record.Data.EXPYR = r.CardExpireYear;
 				record.Data.LAST4 = r.CardLastFour;
 				record.Data.BNAME = r.BillingName;
-				record.Data.TRANSACTIONID = r.TransactionId;				
+				record.Data.TRANSACTIONID = r.TransactionId;							
 				//promiseRecord.Data.Token = PayTrace AuthKey is not available in this call so it is saved in the Success handler
 
 				payment.SavePayTraceTransactionRecord(record); // Save data changes to ExtendedData
 
-				// We can now capture the payment								
-				// The response data is helpful so that we can refund the payment later through the back office if needed.
-				var captureAttempt = invoice.CapturePayment(payment, _paymentMethod, invoice.Total);
-
-				// Raise the event to process the email
-				Processed.RaiseEvent(new PaymentAttemptEventArgs<IPaymentResult>(captureAttempt), this);
-
-				if (captureAttempt.Payment.Success)
+				// If PayTrace returns a SUCCESS, capture and report the full payment amount
+				if (r.Success)
 				{
+					// We can now capture the payment													
+					var captureAttempt = invoice.CapturePayment(payment, _paymentMethod, invoice.Total);
 
-					//Basket.Empty();
-
-					#region S6 OnFinalizing()
-
-					// Faux OnFinalizing() to emulate Merchello.Web/UmbracoApplicationEventHandler.cs#L439 because our custom AuthorizePayment method prevented the default eComm event from firing when the customer initiated a redirect payment
-
-					captureAttempt.Invoice.AuditCreated();
+					// Raise the event to process the email
+					Processed.RaiseEvent(new PaymentAttemptEventArgs<IPaymentResult>(captureAttempt), this);
 
 					if (captureAttempt.Payment.Success)
 					{
-						// Reset the Customer's CheckoutManager
-						//var checkoutManager = Basket.GetCheckoutManager();
-						//checkoutManager.Customer.Reset();
-						//checkoutManager.Offer.Reset();
-						//checkoutManager.Extended.Reset();
-						//checkoutManager.Payment.Reset();
-						//checkoutManager.Shipping.Reset();
 
-						if (captureAttempt.Invoice.InvoiceStatusKey == Core.Constants.DefaultKeys.InvoiceStatus.Paid)
+						#region S6 OnFinalizing()
+
+						// Faux OnFinalizing() to emulate Merchello.Web/UmbracoApplicationEventHandler.cs#L439 because our custom AuthorizePayment method prevented the default eComm event from firing when the customer initiated a redirect payment
+
+						captureAttempt.Invoice.AuditCreated();
+
+						if (captureAttempt.Payment.Success)
 						{
-							captureAttempt.Payment.Result.AuditPaymentCaptured(captureAttempt.Payment.Result.Amount);
+							if (captureAttempt.Invoice.InvoiceStatusKey == Core.Constants.DefaultKeys.InvoiceStatus.Paid)
+							{
+								captureAttempt.Payment.Result.AuditPaymentCaptured(captureAttempt.Payment.Result.Amount);
+							}
+							else
+							{
+								captureAttempt.Payment.Result.AuditPaymentAuthorize(captureAttempt.Invoice);
+							}
 						}
 						else
 						{
-							captureAttempt.Payment.Result.AuditPaymentAuthorize(captureAttempt.Invoice);
+							captureAttempt.Payment.Result.AuditPaymentDeclined();
 						}
-					}
-					else
-					{
-						captureAttempt.Payment.Result.AuditPaymentDeclined();
-					}
 
-					#endregion S6 OnFinalizing()
-
-				}
+						#endregion S6 OnFinalizing()
+					}
+				} else
+				{
+					// PayTrace returned a failure. The record details have been saved to the main Payment data but don't create an Applied Payment
+				}				
 			}
 			catch (Exception ex)
 			{
 				MultiLogHelper.Error<PayTraceRedirectController>(
-					"Failed to Capture SUCCESSFUL PayTrace Redirect payment in silent response.",
-					ex); /*, logData*/
-
-				throw;
+					"Error encountered while processing PayTrace Redirect payment in silent response. ",
+					ex);				
 			}
 		}
 
@@ -254,9 +266,34 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 		{
 			if (id == null || id.Length == 0) return null;
 
-			IInvoice invoice = InvoiceService.GetInvoicesByDateRange((DateTime)SqlDateTime.MinValue, (DateTime)SqlDateTime.MaxValue).OrderBy(x => x.InvoiceNumber).FirstOrDefault(x => x.PoNumber == id);			
-			
+			// Retrieve subset of Invoices within the past 48 hours to limit the cost of this db call. If a matching invoice isn't found, then search within all invoices
+			//IInvoice invoice = InvoiceService.GetInvoicesByDateRange((DateTime)SqlDateTime.MinValue, (DateTime)SqlDateTime.MaxValue).OrderBy(x => x.InvoiceNumber).FirstOrDefault(x => x.PoNumber == id);			
+			IInvoice invoice = InvoiceService.GetInvoicesByDateRange(DateTime.Now.Subtract(new TimeSpan(2,0,0)), DateTime.Now.Add(new TimeSpan(1,0,0))).OrderBy(x => x.InvoiceNumber).FirstOrDefault(x => x.PoNumber == id);
+
 			return invoice;
+		}
+
+		private bool ResetAllCheckoutData()
+		{
+			try
+			{
+				// Reset the Customer's Basket and CheckoutManager data				
+				Basket.Empty();
+				var checkoutManager = Basket.GetCheckoutManager();
+				checkoutManager.Customer.Reset();
+				checkoutManager.Offer.Reset();
+				checkoutManager.Extended.Reset();
+				checkoutManager.Payment.Reset();
+				checkoutManager.Shipping.Reset();				
+			}
+			catch(Exception ex)
+			{
+				LogHelper.Error(typeof(PayTraceRedirectController), "Error encountered while resetting checkout data. ", ex);
+				return false;
+			}
+
+			return true;
+			
 		}
 
 		private void Initialize()
@@ -280,8 +317,9 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			_paytraceService = new PayTraceRedirectService(provider.ExtendedData.GetPayTraceRedirectProviderSettings());
 
 			var settings = provider.ExtendedData.GetPayTraceRedirectProviderSettings();
-			_successUrl = settings.EndUrl; // "Success" might mean the silent response in PayTrace as opposed to PayPal //settings.SuccessUrl;
-			_cancelUrl = settings.CancelUrl;
+			_successUrl = settings.EndUrl; 
+			//_cancelUrl = settings.CancelUrl;
+			_declinedUrl = settings.DeclinedUrl;
 			_deleteInvoiceOnCancel = settings.DeleteInvoiceOnCancel;
 
 			_paymentMethod = provider.GetPaymentGatewayMethodByPaymentCode(Constants.PayTraceRedirect.PaymentCodes.RedirectCheckout) as PayTraceRedirectPaymentGatewayMethod;

@@ -16,7 +16,10 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 		/// </summary>
 		private const string DefaultReturnUrl = "{0}/umbraco/merchello/paytraceredirect/success";
 
-		private const string DefaultCancelUrl = "{0}/umbraco/merchello/paytraceredirect/cancel";
+		/// <summary>
+		/// The default return URL that a Canceled PayTrace Redirect transaction should call.
+		/// </summary>
+		//private const string DefaultCancelUrl = "{0}/umbraco/merchello/paytraceredirect/cancel";
 
 		private const string DefaultSilentResponseUrl = "{0}/umbraco/merchello/paytraceredirect/paytracesilentresponse"; // Params are sent and defined by PayTrace
 				
@@ -35,7 +38,7 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 		{			
 			var siteUrl = PayTraceHelper.GetBaseWebsiteUrl();
             SuccessUrl = string.Format(DefaultReturnUrl, siteUrl);
-			CancelUrl = string.Format(DefaultCancelUrl, siteUrl); 
+			//CancelUrl = string.Format(DefaultCancelUrl, siteUrl); 
 			SilentResponseUrl = string.Format(DefaultSilentResponseUrl, siteUrl); 
 			RetryUrl = string.Format(DefaultRetryUrl, siteUrl); 
 			DeclinedUrl = string.Format(DefaultDeclinedUrl, siteUrl);

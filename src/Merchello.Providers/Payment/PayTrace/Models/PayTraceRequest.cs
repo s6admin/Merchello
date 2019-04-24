@@ -13,7 +13,7 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 		// S6 TODO web.config all parameters
 		public static string GrantType = "password"; 
 		public static string UserName = "cbell%40sidesixmedia.com"; // Url-encoded from: "cbell@sidesixmedia.com"
-		public static string Password = "PLiy3%25%3B%7DEOhN8!s4"; // Url-encoded from: "PLiy3%;}EOhN8!s3"
+		public static string Password = "PLiy3%25%3B%7DEOhN8!s6"; // Url-encoded from: "PLiy3%;}EOhN8!s3"
 
         public static string GetFormattedRequest()
         {

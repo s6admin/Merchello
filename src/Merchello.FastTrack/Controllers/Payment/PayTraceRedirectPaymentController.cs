@@ -118,6 +118,7 @@
 			if (!attempt.Payment.Success)
 			{
 				LogHelper.Error(typeof(PayTraceRedirectPaymentController), "AuthorizePayment failed. ", attempt.Payment.Exception);
+				CustomerContext.SetValue("invoiceKey", null); // S6 Ensure invoiceKey is cleraed if a payment fails. It will be successfully re-set below once the payment succeeds
 				return CurrentUmbracoPage();			
 			}
 			
@@ -207,7 +208,7 @@
 				//op += "PHONE~" + "|"; // Phone isn't present in either Customer or Address details, but might not be important to process the transaction anyway
 				op += "RETURNPARIS~Y|";
 				op += "ENABLEREDIRECT~Y" + "|";
-				op += "TEST~Y" + "|";
+				//op += "TEST~Y" + "|";
 
 				// Parameter structure
 				// op += "~" + "|"; 
@@ -221,7 +222,27 @@
 				return CurrentUmbracoPage();
 			}
 		}
-		
+
+		protected override ActionResult HandlePaymentException(PayTraceRedirectPaymentModel model, Exception ex)
+		{
+
+			//// Keep track of the failed attempts in the Customer data so the next checkout step is aware of the payment failure(s)
+			//int attempts = 1;
+			//ExtendedDataCollection ed = CheckoutManager.Customer.Context.Customer.ExtendedData;
+
+			//// Retrieve previous saved value if it exists
+			//if (ed.ContainsKey(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts))
+			//{
+			//	int.TryParse(ed.GetValue(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts), out attempts); // Retrieve previous value
+			//	attempts = attempts + 1; // Increment previous value				
+			//}
+
+			//ed.SetValue(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts, attempts.ToString());
+			//ViewData[MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts] = attempts;
+
+			return base.HandlePaymentException(model, ex);
+		}
+
 		/// <summary>
 		/// Sends the validation request to PayTrace.
 		/// </summary>

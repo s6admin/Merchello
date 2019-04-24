@@ -55,8 +55,7 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 		/// The <see cref="bool"/>.
 		/// </returns>
 		public static bool Success(this PayTraceRedirectSilentResponse response)
-		{
-			// TODO There will likely be other factors to flagging payment success
+		{			
 			return response.Success;
 		}
 	}

@@ -84,7 +84,15 @@
 						If an order has been accepted by the office even after payment failure, the customer should not see those items in their active cart anymore
 					*/
 					Basket.Empty();
-				}
+				} else if (CheckoutManager.Customer.Context.Customer.ExtendedData.ContainsKey(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts))
+				{
+					// Failed payment attempts for PayTrace Redirect
+					CheckoutManager.Customer.Context.Customer.ExtendedData.RemoveValue(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts);
+					if(vr.TempData != null)
+					{
+						vr.TempData.Add(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts, true);
+					}
+                }
 
 				return vr;
 
