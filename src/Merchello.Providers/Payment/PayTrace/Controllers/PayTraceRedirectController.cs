@@ -61,7 +61,8 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 		public static event TypedEventHandler<PayTraceRedirectController, ObjectEventArgs<PaymentRedirectingUrl>> RedirectingForCancel;
 
 		// S6 So OnFinalizing can be broadcast after a redirect payment has been successfully detected
-		public static event TypedEventHandler<CheckoutPaymentManagerBase, CheckoutEventArgs<IPaymentResult>> Finalizing;
+		//public static event TypedEventHandler<CheckoutPaymentManagerBase, CheckoutEventArgs<IPaymentResult>> Finalizing;
+		public static event TypedEventHandler<PayTraceRedirectController, CheckoutEventArgs<IPaymentResult>> Finalizing;
 
 		/// <summary>
 		/// Occurs after the final redirection and before redirecting to the success URL
@@ -81,8 +82,6 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 		{
 			
 			PayTraceRedirectResponse r = PayTraceHelper.ParsePayTraceParamList(parmList);
-			
-			//ResetAllCheckoutData(); // TODO S6 This happening too soon..it causes the CustomerContext to be scrubbed before SalesReceipt. At least CustomerContext invoiceKey needs to be preserved
 
 			//try
 			//{
@@ -96,23 +95,31 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			//	//record.Data.AUTHKEY = r.Token; // PayTrace AuthKey, which is only passed to success, not the silent response
 
 			//	//payment.SavePayTraceTransactionRecord(record);
-				
+
 			//} catch(Exception ex)
 			//{
 			//	MultiLogHelper.Error<PayTraceRedirectController>(ex.Message, ex);
 			//}
-			
+
+			Basket.Empty();
+			//ResetAllCheckoutData(); //ResetAllCheckoutData(); // This ruins the CustomerContext so the wrong invoice is shown on Sales Receipt
+
 			var redirecting = new PaymentRedirectingUrl("Success") { RedirectingToUrl = _successUrl };
 			
 			return Redirect(redirecting.RedirectingToUrl); 
 		}
 
+		/// <summary>
+		/// Handles a Declined response from the payment provider. Declined orders are still accepted but will display a warning message to the customer on the receipt page that their payment was not processed.
+		/// </summary>
+		/// <param name="parmList">The parm list.</param>
+		/// <returns></returns>
 		public override ActionResult Declined(string parmList)
 		{
 			/*
 			/declined?parmList=OrderID~2019020504440768%7CAuthKey~7487400%7CEMAIL~test%40test%2Etest%7C
 			*/
-
+			
 			PayTraceRedirectResponse r = PayTraceHelper.ParsePayTraceParamList(parmList);
 
 			// _declinedUrl is available, but _successUrl is set to Receipt page by default which will still be shown to customers after a decline but with additional details about their unpaid order
@@ -133,29 +140,38 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 				LogHelper.Error(typeof(PayTraceRedirectController), ex.Message, ex);
 			}
 
-			// Keep track of the failed attempts in the Customer data so the next checkout step is aware of the payment failure(s)
-			int attempts = 1;
-			ExtendedDataCollection ed = CurrentCustomer.ExtendedData; // TODO Ensure this is the correct context
+			/* 
+				Keep track of the failed attempts in the Customer data so the next checkout step is aware of the payment failure(s)			
+				For v1 the Invoice UNPAID Status is used to indicate if a message should be displayed on the SalesReceipt page but
+				tracking failed attempts will be helpful once customers are permitted to "retry" their payments in v1.5
+			*/
+			//int attempts = 1;
+			//ExtendedDataCollection ed = CurrentCustomer.ExtendedData;
+			var c1 = CustomerContext.CurrentCustomer;
+			var c2 = CurrentCustomer;
 
-			// Retrieve previous saved value if it exists
-			if (ed.ContainsKey(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts))
-			{
-				int.TryParse(ed.GetValue(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts), out attempts); // Retrieve previous value
-				attempts = attempts + 1; // Increment previous value				
-			}
+			//// Retrieve previous saved value if it exists
+			//if (ed.ContainsKey(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts))
+			//{
+			//	int.TryParse(ed.GetValue(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts), out attempts); // Retrieve previous value
+			//	attempts = attempts + 1; // Increment previous value				
+			//}
 
-			ed.SetValue(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts, attempts.ToString());
-			ViewData[MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts] = attempts;
+			//ed.SetValue(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts, attempts.ToString());
+			//ViewData[MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts] = attempts;
 
-			ResetAllCheckoutData();
+			// https://our.umbraco.com/packages/collaboration/merchello/merchello/85200-invoice-items-missing-in-second-order
+
+			Basket.Empty();
+			//ResetAllCheckoutData(); // This ruins the CustomerContext so the wrong invoice is shown on Sales Receipt
 
 			return Redirect(redirecting.RedirectingToUrl);
 		}
 
-		// The Url hooked by the PayTrace Redirect silent response (in ALL success or fail cases)
+		// The Url hooked by the PayTrace Redirect silent response (in ALL success or fail cases). This is not a conventional Payment Provider workflow so try to avoid doing anything eComm-related (Customer, Basket, etc...) other than capturing a payment
 		public void PayTraceSilentResponse(string parmList)
 		{
-			// NOTE: Customer/Basket contexts are out of scope here so any actions related to checkout don't do anything. Use Success() instead for tasks like reseting CheckoutManager and the basket.
+			// NOTE: Customer/Basket contexts are out of scope here so any actions related to checkout don't do anything. Use Success() instead for tasks like resetting CheckoutManager and the basket.
 			// Invoice and/or database tasks should still be performed
 
 			PayTraceRedirectSilentResponse r = PayTraceHelper.ParsePayTraceSilentParamList(parmList);
@@ -227,32 +243,49 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 
 						#region S6 OnFinalizing()
 
-						// Faux OnFinalizing() to emulate Merchello.Web/UmbracoApplicationEventHandler.cs#L439 because our custom AuthorizePayment method prevented the default eComm event from firing when the customer initiated a redirect payment
-
-						captureAttempt.Invoice.AuditCreated();
-
-						if (captureAttempt.Payment.Success)
+						try
 						{
-							if (captureAttempt.Invoice.InvoiceStatusKey == Core.Constants.DefaultKeys.InvoiceStatus.Paid)
+							//Finalizing.RaiseEvent(new CheckoutEventArgs<IPaymentResult>(CurrentCustomer, captureAttempt), this);
+							Finalizing.RaiseEvent(new CheckoutEventArgs<IPaymentResult>(CurrentCustomer, captureAttempt), this);
+						} catch(Exception ex)
+						{
+							// Faux OnFinalizing() to emulate Merchello.Web/UmbracoApplicationEventHandler.cs#L439 because our custom AuthorizePayment method prevented the default eComm event from firing when the customer initiated a redirect payment
+							// https://our.umbraco.com/packages/collaboration/merchello/merchello/81312-retain-shipping-address-after-redirect
+
+							captureAttempt.Invoice.AuditCreated();
+
+							if (captureAttempt.Payment.Success)
 							{
-								captureAttempt.Payment.Result.AuditPaymentCaptured(captureAttempt.Payment.Result.Amount);
+
+								// S6 UmbracoApplicationEventHandler resets the CheckoutManager here, but in this scope it only hits if a payment was successful
+								//CurrentCustomer.Basket().GetCheckoutManager().Reset();
+
+								if (captureAttempt.Invoice.InvoiceStatusKey == Core.Constants.DefaultKeys.InvoiceStatus.Paid)
+								{
+									captureAttempt.Payment.Result.AuditPaymentCaptured(captureAttempt.Payment.Result.Amount);
+								}
+								else
+								{
+									captureAttempt.Payment.Result.AuditPaymentAuthorize(captureAttempt.Invoice);
+								}
 							}
 							else
 							{
-								captureAttempt.Payment.Result.AuditPaymentAuthorize(captureAttempt.Invoice);
+								captureAttempt.Payment.Result.AuditPaymentDeclined();
 							}
 						}
-						else
-						{
-							captureAttempt.Payment.Result.AuditPaymentDeclined();
-						}
-
+						
 						#endregion S6 OnFinalizing()
 					}
 				} else
 				{
 					// PayTrace returned a failure. The record details have been saved to the main Payment data but don't create an Applied Payment
-				}				
+				}
+
+				// S6 Reset checkout manager regardless of payment success/failure
+				// This fires before Success or Declined (and as an ASYNC) so it may be too early to reset the manager if either of those methods require data from the checkout other than the invoiceKey
+				//Basket.Empty();
+				//CurrentCustomer.Basket().GetCheckoutManager().Reset();	
 			}
 			catch (Exception ex)
 			{
@@ -277,14 +310,17 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 		{
 			try
 			{
-				// Reset the Customer's Basket and CheckoutManager data				
+
+				// Reset the Customer's Basket and CheckoutManager data								
 				Basket.Empty();
-				var checkoutManager = Basket.GetCheckoutManager();
-				checkoutManager.Customer.Reset();
-				checkoutManager.Offer.Reset();
-				checkoutManager.Extended.Reset();
-				checkoutManager.Payment.Reset();
-				checkoutManager.Shipping.Reset();				
+				var checkoutManager = CurrentCustomer.Basket().GetCheckoutManager(); // PayPalExpressController has NO Basket or CheckoutManager references, so maybe this request is what causes the issue?
+
+				checkoutManager.Reset(); // eComm core has a wrapper method for resetting which just calls each method below				
+				//checkoutManager.Customer.Reset(); // TODO Does this ultimately wipe the customer context invoice key?
+				//checkoutManager.Offer.Reset();
+				//checkoutManager.Extended.Reset();
+				//checkoutManager.Payment.Reset();
+				//checkoutManager.Shipping.Reset();				
 			}
 			catch(Exception ex)
 			{

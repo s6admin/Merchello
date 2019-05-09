@@ -109,20 +109,21 @@
 				We need to implement our own AuthorizePayment that avoids this Finalizing call
 			*/
 
-			string successUrl = System.Configuration.ConfigurationManager.AppSettings["payTraceSuccessUrl"]; // TODO MC.PayTraceRedirect.AppSettingKeys		
+			string successUrl = System.Configuration.ConfigurationManager.AppSettings["payTraceSuccessUrl"];
 
 			// Create zero dollar payment (promise of) so an Invoice Id is generated and can be provided to the PayTrace redirect page
 			var attempt = CheckoutManager.Payment.AuthorizePayment(paymentMethod.Key, null, false); // S6 custom AuthorizePayment that doesn't force OnFinalizing()
 			var resultModel = CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod, attempt);
-			
+
 			if (!attempt.Payment.Success)
 			{
-				LogHelper.Error(typeof(PayTraceRedirectPaymentController), "AuthorizePayment failed. ", attempt.Payment.Exception);
-				CustomerContext.SetValue("invoiceKey", null); // S6 Ensure invoiceKey is cleraed if a payment fails. It will be successfully re-set below once the payment succeeds
+				LogHelper.Error(typeof(PayTraceRedirectPaymentController), "AuthorizePayment failed. ", attempt.Payment.Exception);				
+				//CustomerContext.SetValue("invoiceKey", null); // S6 Ensure invoiceKey is cleared if a payment fails. It will be successfully re-set below once the payment succeeds
 				return CurrentUmbracoPage();			
 			}
-			
+			// Pay Pal Express sets InvoiceKey on payment success but since client will accept orders even with failed payments, the invoiceKey should ALWAYS be set
 			CustomerContext.SetValue("invoiceKey", attempt.Invoice.Key.ToString());
+
 			string redirectUrl = string.Empty;
 			if (attempt.RedirectUrl != null && attempt.RedirectUrl.Length > 0)
 			{
