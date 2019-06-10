@@ -242,50 +242,42 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 					{
 
 						#region S6 OnFinalizing()
+																		
+						// Hooks UmbracoApplicationEventHandler.cs (eComm core) and custom PayTraceRedirectEventHandler.cs (client project)
+						Finalizing.RaiseEvent(new CheckoutEventArgs<IPaymentResult>(CurrentCustomer, captureAttempt), this);
+						
+						// Faux OnFinalizing() to emulate Merchello.Web/UmbracoApplicationEventHandler.cs#L439 because our custom AuthorizePayment method prevented the default eComm event from firing when the customer initiated a redirect payment
+						// https://our.umbraco.com/packages/collaboration/merchello/merchello/81312-retain-shipping-address-after-redirect
 
-						try
-						{
-							//Finalizing.RaiseEvent(new CheckoutEventArgs<IPaymentResult>(CurrentCustomer, captureAttempt), this);
-							Finalizing.RaiseEvent(new CheckoutEventArgs<IPaymentResult>(CurrentCustomer, captureAttempt), this);
-						} catch(Exception ex)
-						{
-							// Faux OnFinalizing() to emulate Merchello.Web/UmbracoApplicationEventHandler.cs#L439 because our custom AuthorizePayment method prevented the default eComm event from firing when the customer initiated a redirect payment
-							// https://our.umbraco.com/packages/collaboration/merchello/merchello/81312-retain-shipping-address-after-redirect
+						//captureAttempt.Invoice.AuditCreated();
 
-							captureAttempt.Invoice.AuditCreated();
+						//if (captureAttempt.Payment.Success)
+						//{
 
-							if (captureAttempt.Payment.Success)
-							{
+						//	// S6 UmbracoApplicationEventHandler resets the CheckoutManager here, but in this scope it only hits if a payment was successful
+						//	//CurrentCustomer.Basket().GetCheckoutManager().Reset();
 
-								// S6 UmbracoApplicationEventHandler resets the CheckoutManager here, but in this scope it only hits if a payment was successful
-								//CurrentCustomer.Basket().GetCheckoutManager().Reset();
-
-								if (captureAttempt.Invoice.InvoiceStatusKey == Core.Constants.DefaultKeys.InvoiceStatus.Paid)
-								{
-									captureAttempt.Payment.Result.AuditPaymentCaptured(captureAttempt.Payment.Result.Amount);
-								}
-								else
-								{
-									captureAttempt.Payment.Result.AuditPaymentAuthorize(captureAttempt.Invoice);
-								}
-							}
-							else
-							{
-								captureAttempt.Payment.Result.AuditPaymentDeclined();
-							}
-						}
+						//	if (captureAttempt.Invoice.InvoiceStatusKey == Core.Constants.DefaultKeys.InvoiceStatus.Paid)
+						//	{
+						//		captureAttempt.Payment.Result.AuditPaymentCaptured(captureAttempt.Payment.Result.Amount);
+						//	}
+						//	else
+						//	{
+						//		captureAttempt.Payment.Result.AuditPaymentAuthorize(captureAttempt.Invoice);
+						//	}
+						//}
+						//else
+						//{
+						//	captureAttempt.Payment.Result.AuditPaymentDeclined();
+						//}
+						
 						
 						#endregion S6 OnFinalizing()
 					}
 				} else
 				{
 					// PayTrace returned a failure. The record details have been saved to the main Payment data but don't create an Applied Payment
-				}
-
-				// S6 Reset checkout manager regardless of payment success/failure
-				// This fires before Success or Declined (and as an ASYNC) so it may be too early to reset the manager if either of those methods require data from the checkout other than the invoiceKey
-				//Basket.Empty();
-				//CurrentCustomer.Basket().GetCheckoutManager().Reset();	
+				}				
 			}
 			catch (Exception ex)
 			{
@@ -314,13 +306,12 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 				// Reset the Customer's Basket and CheckoutManager data								
 				Basket.Empty();
 				var checkoutManager = CurrentCustomer.Basket().GetCheckoutManager(); // PayPalExpressController has NO Basket or CheckoutManager references, so maybe this request is what causes the issue?
-
-				checkoutManager.Reset(); // eComm core has a wrapper method for resetting which just calls each method below				
-				//checkoutManager.Customer.Reset(); // TODO Does this ultimately wipe the customer context invoice key?
-				//checkoutManager.Offer.Reset();
-				//checkoutManager.Extended.Reset();
-				//checkoutManager.Payment.Reset();
-				//checkoutManager.Shipping.Reset();				
+								
+				checkoutManager.Customer.Reset(); // TODO Does this ultimately wipe the customer context invoice key?
+				checkoutManager.Offer.Reset();
+				checkoutManager.Extended.Reset();
+				checkoutManager.Payment.Reset();
+				checkoutManager.Shipping.Reset();				
 			}
 			catch(Exception ex)
 			{

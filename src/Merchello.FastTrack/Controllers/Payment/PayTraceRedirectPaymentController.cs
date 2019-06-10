@@ -71,7 +71,7 @@
 
 			return view.IsNullOrWhiteSpace() ? this.PartialView(model) : this.PartialView(view, model);
 		}
-
+		
 		/// <summary>
 		/// Begins the PayTrace Redirect process after the customer clicks the form button (no fields are submitted). This method is called PROCESS in the referenced PayPal Express provider.
 		/// </summary>

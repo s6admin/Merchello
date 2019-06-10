@@ -299,7 +299,7 @@
         public virtual ActionResult CustomerShippingAddress(string view = "")
         {
             var customer = (ICustomer)CurrentCustomer;
-            var caddress = customer.DefaultCustomerAddress(AddressType.Billing);
+            var caddress = customer.DefaultCustomerAddress(AddressType.Shipping); // S6 Why was this set to AddressType.Billing!?
 
             var model = caddress != null ? 
                 this.ShippingAddressFactory.Create(customer, caddress) : 
