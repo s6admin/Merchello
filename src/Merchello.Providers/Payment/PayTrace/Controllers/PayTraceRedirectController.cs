@@ -103,12 +103,19 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			//}
 
 			Basket.Empty();
-			ResetAllCheckoutData(); 
+			ResetAllCheckoutData();
 
 			// Just to be safe, ensure invoiceKey is present in the CustomerContext in case resetting the Customer or CheckoutManager causes it to get lost
-			if (invoice != null && CustomerContext.GetValue("invoiceKey") == null)
+			try
 			{
-				CustomerContext.SetValue("invoiceKey", invoice.Key.ToString()); 
+				if (invoice != null && CustomerContext.GetValue("invoiceKey") == null)
+				{
+					CustomerContext.SetValue("invoiceKey", invoice.Key.ToString()); // Re-apply invoiceKey after clearing CheckoutManager so SalesReceipt page still shows the appropriate invoice
+				}
+			}
+			catch (Exception ex)
+			{
+				LogHelper.Error(typeof(PayTraceRedirectController), "Error setting Customer Context Invoice Key. ", ex);
 			}
 
 			var redirecting = new PaymentRedirectingUrl("Success") { RedirectingToUrl = _successUrl };
@@ -173,12 +180,17 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			ResetAllCheckoutData(); // Caution: This has randomly cleared/triggered the CustomerContext key in the past so the InvoiceKey has been lost which the sales receipt page requires
 
 			// Just to be safe, ensure invoiceKey is present in the CustomerContext in case resetting the Customer or CheckoutManager causes it to get lost
-			if (invoice != null && CustomerContext.GetValue("invoiceKey") == null)
+			try
 			{
-				CustomerContext.SetValue("invoiceKey", invoice.Key.ToString()); // Re-apply invoiceKey after clearing CheckoutManager so SalesReceipt page still shows the appropriate invoice
+				if (invoice != null && CustomerContext.GetValue("invoiceKey") == null)
+				{
+					CustomerContext.SetValue("invoiceKey", invoice.Key.ToString()); // Re-apply invoiceKey after clearing CheckoutManager so SalesReceipt page still shows the appropriate invoice
+				}
+			} catch(Exception ex)
+			{
+				LogHelper.Error(typeof(PayTraceRedirectController), "Error setting Customer Context Invoice Key. ", ex);
 			}
-
-
+			
 			return Redirect(redirecting.RedirectingToUrl);
 		}
 
