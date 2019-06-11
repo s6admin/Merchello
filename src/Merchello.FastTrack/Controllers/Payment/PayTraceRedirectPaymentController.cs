@@ -117,8 +117,7 @@
 
 			if (!attempt.Payment.Success)
 			{
-				LogHelper.Error(typeof(PayTraceRedirectPaymentController), "AuthorizePayment failed. ", attempt.Payment.Exception);				
-				//CustomerContext.SetValue("invoiceKey", null); // S6 Ensure invoiceKey is cleared if a payment fails. It will be successfully re-set below once the payment succeeds
+				LogHelper.Error(typeof(PayTraceRedirectPaymentController), "AuthorizePayment failed. ", attempt.Payment.Exception);								
 				return CurrentUmbracoPage();			
 			}
 			// Pay Pal Express sets InvoiceKey on payment success but since client will accept orders even with failed payments, the invoiceKey should ALWAYS be set
