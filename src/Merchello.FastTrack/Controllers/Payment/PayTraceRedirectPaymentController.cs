@@ -78,7 +78,7 @@
 		/// <returns></returns>
 		[HttpPost]
 		[ValidateAntiForgeryToken]
-		public ActionResult HandlePaymentForm(PayTraceRedirectPaymentModel model)
+		protected ActionResult HandlePaymentForm(PayTraceRedirectPaymentModel model, string apiuser = "", string apipswd = "")
 		{
 			
             var paymentMethod = this.CheckoutManager.Payment.GetPaymentMethod();
@@ -109,7 +109,7 @@
 				We need to implement our own AuthorizePayment that avoids this Finalizing call
 			*/
 
-			string successUrl = System.Configuration.ConfigurationManager.AppSettings["payTraceSuccessUrl"];
+			//string successUrl = System.Configuration.ConfigurationManager.AppSettings["payTraceSuccessUrl"];
 
 			// Create zero dollar payment (promise of) so an Invoice Id is generated and can be provided to the PayTrace redirect page
 			var attempt = CheckoutManager.Payment.AuthorizePayment(paymentMethod.Key, null, false); // S6 custom AuthorizePayment that doesn't force OnFinalizing()
@@ -151,9 +151,11 @@
 			// to get an approval amount set: AMOUNT~1.00
 			// to get a declined amount set: AMOUNT~1.12
 			string parameters = string.Empty;
+			string username = !apiuser.IsNullOrWhiteSpace() ? apiuser : ApiAccessCredentials.UserName;
+			string passw = !apipswd.IsNullOrWhiteSpace() ? apipswd : ApiAccessCredentials.Password;
 
-			parameters += "UN~" + ApiAccessCredentials.UserName + "|";
-			parameters += "PSWD~" + ApiAccessCredentials.Password + "|";
+            parameters += "UN~" + username + "|";
+			parameters += "PSWD~" + passw + "|";
 			parameters += "ORDERID~" + model.OrderNumber + "|";
 			parameters += "AMOUNT~" + model.Amount + "|";
 			parameters += "TERMS~Y|TRANXTYPE~Sale|";
