@@ -81,7 +81,8 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 		public override ActionResult Success(string parmList)
 		{
 			
-			PayTraceRedirectResponse r = PayTraceHelper.ParsePayTraceParamList(parmList);
+			PayTraceRedirectResponse r = PayTraceHelper.ParsePayTraceParamList(parmList);			
+			LogHelper.Warn(typeof(PayTraceRedirectController), "PayTraceSuccess received. ParamList: " + parmList);
 			var invoice = GetInvoiceByOrderId(r.OrderId);
 
 			//try
@@ -103,20 +104,35 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			//}
 
 			Basket.Empty();
-			ResetAllCheckoutData();
+			/*
+				WARNING
+				Reset is called in SilentResponse regardless of success or decline payment result. 
+				Do NOT call reset again here as it causes unpredictable results to the customer context and receipt page!
+			*/
+			//ResetAllCheckoutData();
+
+			//CustomerContext.Reinitialize(CustomerContext.CurrentCustomer); // Attempt to reset customer context after resetting checkoutmanager but BEFORE ensuring invoiceKey
 
 			// Just to be safe, ensure invoiceKey is present in the CustomerContext in case resetting the Customer or CheckoutManager causes it to get lost
 			try
 			{
 				if (invoice != null && CustomerContext.GetValue("invoiceKey") == null)
 				{
+					LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is NULL. Attempting to set from invoice: " + invoice.Key);
 					CustomerContext.SetValue("invoiceKey", invoice.Key.ToString()); // Re-apply invoiceKey after clearing CheckoutManager so SalesReceipt page still shows the appropriate invoice
+					LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is now: " + invoice.Key);
+				}
+				else
+				{
+					LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey retained: " + invoice.Key);
 				}
 			}
 			catch (Exception ex)
 			{
 				LogHelper.Error(typeof(PayTraceRedirectController), "Error setting Customer Context Invoice Key. ", ex);
 			}
+
+			LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey before receipt redirect: " + invoice.Key);
 
 			var redirecting = new PaymentRedirectingUrl("Success") { RedirectingToUrl = _successUrl };
 			
@@ -135,6 +151,7 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			*/
 			
 			PayTraceRedirectResponse r = PayTraceHelper.ParsePayTraceParamList(parmList);
+			LogHelper.Warn(typeof(PayTraceRedirectController), "PayTraceDeclined received. ParamList: " + parmList);
 
 			// _declinedUrl is available, but _successUrl is set to Receipt page by default which will still be shown to customers after a decline but with additional details about their unpaid order
 			var redirecting = new PaymentRedirectingUrl("Declined") { RedirectingToUrl = _successUrl };
@@ -163,7 +180,7 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			//int attempts = 1;
 			//ExtendedDataCollection ed = CurrentCustomer.ExtendedData;
 			//var c1 = CustomerContext.CurrentCustomer; // CurrentCustomer
-			
+
 			//// Retrieve previous saved value if it exists
 			//if (ed.ContainsKey(MC.PayTraceRedirect.ExtendedDataKeys.FailedAttempts))
 			//{
@@ -176,21 +193,35 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 
 			// https://our.umbraco.com/packages/collaboration/merchello/merchello/85200-invoice-items-missing-in-second-order
 
-			Basket.Empty();
-			ResetAllCheckoutData(); // Caution: This has randomly cleared/triggered the CustomerContext key in the past so the InvoiceKey has been lost which the sales receipt page requires
+			LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is: " + invoice.Key);
 
+			Basket.Empty();
+			/*
+				WARNING
+				Reset is called in SilentResponse regardless of success or decline payment result. 
+				Do NOT call reset again here as it causes unpredictable results to the customer context and receipt page!
+			*/
+			//ResetAllCheckoutData();
+			
 			// Just to be safe, ensure invoiceKey is present in the CustomerContext in case resetting the Customer or CheckoutManager causes it to get lost
 			try
 			{
 				if (invoice != null && CustomerContext.GetValue("invoiceKey") == null)
 				{
+					LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is NULL. Attempting to set from invoice: " + invoice.Key);
 					CustomerContext.SetValue("invoiceKey", invoice.Key.ToString()); // Re-apply invoiceKey after clearing CheckoutManager so SalesReceipt page still shows the appropriate invoice
+					LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is now: " + invoice.Key);
+				} else
+				{
+					LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey retained: " + invoice.Key);
 				}
 			} catch(Exception ex)
 			{
 				LogHelper.Error(typeof(PayTraceRedirectController), "Error setting Customer Context Invoice Key. ", ex);
 			}
-			
+
+			LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey before receipt redirect: " + invoice.Key);
+
 			return Redirect(redirecting.RedirectingToUrl);
 		}
 
@@ -202,6 +233,8 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 
 			PayTraceRedirectSilentResponse r = PayTraceHelper.ParsePayTraceSilentParamList(parmList);
 
+			LogHelper.Warn(typeof(PayTraceRedirectController), "PayTraceSilentResponse received. ParamList: " + parmList);
+
 			/* 
 				NOTE: PayTrace example docs are missing some properties. The full param list returned includes:
 
@@ -210,7 +243,7 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 				PayTrace Doc Example:
 				parmList=ORDERID%7E123456%7CTRANSACTIONID%7E62279788%7CAPPCODE%7ETAS456%7CAPPMSG%7E++NO++MATCH++++++%2D+Approved+and+completed%7CAVSRESPONSE%7ENo+Match%7CCSCRESPONSE%7EMatch%7CEMAIL%7Etest%40test%2Ecom%7C			
 			*/
-						
+
 			try
 			{
 				// Record all PayTrace response values regardless of payment success/failure
@@ -285,6 +318,7 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 				} else
 				{
 					// PayTrace returned a failure. The record details have been saved to the main Payment data but don't create an Applied Payment
+					LogHelper.Warn(typeof(PayTraceRedirectController), "PayTrace Redirect payment for order " + r.OrderId + " was flagged as unsuccessful. Please review merchant logs for additional details.");
 				}				
 			}
 			catch (Exception ex)
@@ -306,30 +340,30 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			return invoice;
 		}
 
-		private bool ResetAllCheckoutData()
-		{
-			try
-			{
+		//private bool ResetAllCheckoutData()
+		//{
+		//	try
+		//	{
 
-				// Reset the Customer's Basket and CheckoutManager data								
-				Basket.Empty();
-				var checkoutManager = CurrentCustomer.Basket().GetCheckoutManager(); // PayPalExpressController has NO Basket or CheckoutManager references, so maybe this request is what causes the issue?
-								
-				checkoutManager.Customer.Reset(); // TODO Does this ultimately wipe the customer context invoice key?
-				checkoutManager.Offer.Reset();
-				checkoutManager.Extended.Reset();
-				checkoutManager.Payment.Reset();
-				checkoutManager.Shipping.Reset();				
-			}
-			catch(Exception ex)
-			{
-				LogHelper.Error(typeof(PayTraceRedirectController), "Error encountered while resetting checkout data. ", ex);
-				return false;
-			}
+		//		// Reset the Customer's Basket and CheckoutManager data												
+		//		Basket.Empty();
+		//		var checkoutManager = CurrentCustomer.Basket().GetCheckoutManager(); // PayPalExpressController has NO Basket or CheckoutManager references, so maybe this request is what causes the issue?
+		//		Console.WriteLine(checkoutManager.Context.Settings);
+		//		checkoutManager.Customer.Reset(); // TODO Does this ultimately wipe the customer context invoice key?
+		//		checkoutManager.Offer.Reset();
+		//		checkoutManager.Extended.Reset();
+		//		checkoutManager.Payment.Reset();
+		//		checkoutManager.Shipping.Reset();				
+		//	}
+		//	catch(Exception ex)
+		//	{
+		//		LogHelper.Error(typeof(PayTraceRedirectController), "Error encountered while resetting checkout data. ", ex);
+		//		return false;
+		//	}
 
-			return true;
+		//	return true;
 			
-		}
+		//}
 
 		private void Initialize()
 		{

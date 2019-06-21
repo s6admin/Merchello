@@ -182,7 +182,7 @@ namespace Merchello.Providers.Payment.PayTrace.Provider
 			PayTraceRedirectProviderSettings settings;
 			if (this.ExtendedData.ContainsKey(Constants.PayTraceRedirect.ExtendedDataKeys.ProviderSettings))
 			{
-				var json = this.ExtendedData.GetValue(Constants.PayPal.ExtendedDataKeys.ProviderSettings);
+				var json = this.ExtendedData.GetValue(Constants.PayTraceRedirect.ExtendedDataKeys.ProviderSettings);
 				settings = JsonConvert.DeserializeObject<PayTraceRedirectProviderSettings>(json);
 			}
 			else

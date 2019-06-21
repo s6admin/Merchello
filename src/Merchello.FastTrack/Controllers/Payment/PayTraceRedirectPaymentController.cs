@@ -198,7 +198,8 @@
 				#endregion Optional Parameters Reference
 				string op = string.Empty;
 
-				
+				//op += "HIDEPASSWORD~Y|"; // Does other stuff with the OrderId that might be unwanted, so prefer disablelogin instead
+				op += "DISABLELOGIN~Y|";
 				op += "BNAME~" + WebUtility.UrlEncode(model.BillingAddress.Name) + "|";
 				op += "BADDRESS~" + WebUtility.UrlEncode(model.BillingAddress.StreetAddress) + "|";
 				op += "BADDRESS2~" + WebUtility.UrlEncode(model.BillingAddress.StreetAddress2) + "|";
