@@ -29,6 +29,8 @@ using Merchello.Core.Checkout;
 using Merchello.Web;
 using Merchello.Web.Models.SaleHistory;
 using Umbraco.Core.Logging;
+using Merchello.Core.Configuration;
+using Merchello.Web.Pluggable;
 
 namespace Merchello.Providers.Payment.PayTrace.Controllers
 {
@@ -103,20 +105,32 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			//	MultiLogHelper.Error<PayTraceRedirectController>(ex.Message, ex);
 			//}
 
+			// CurrentCustomer is correct here so why does resetting the checkoutmanager cause issues with the customer context/sales receipt!?
+			Console.WriteLine(CurrentCustomer);
+
+			var cm = CustomerContext.CurrentCustomer.Basket().GetCheckoutManager(MerchelloConfiguration.Current.CheckoutContextSettings);
+            Console.WriteLine(cm);
+
+			// Incorrect
+			//var cm = Basket.GetCheckoutManager(MerchelloConfiguration.Current.CheckoutContextSettings);
+			//Console.WriteLine(cm);
+			//cm.Reset();
+
+			LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is: " + invoice.Key);
+
 			Basket.Empty();
 			/*
-				WARNING
-				Reset is called in SilentResponse regardless of success or decline payment result. 
-				Do NOT call reset again here as it causes unpredictable results to the customer context and receipt page!
+				WARNING				
+				Resetting CheckoutManager here ends up triggering some kind of Customer Context issue while redirecting to the Sales Receipt page for Registered Customers
+				so they see the wrong invoice displayed. Doesn't seem to occur for Anonymous Customers, however.
 			*/
-			//ResetAllCheckoutData();
-
+			ResetAllCheckoutData();
+			
 			//CustomerContext.Reinitialize(CustomerContext.CurrentCustomer); // Attempt to reset customer context after resetting checkoutmanager but BEFORE ensuring invoiceKey
-
+			
 			// Just to be safe, ensure invoiceKey is present in the CustomerContext in case resetting the Customer or CheckoutManager causes it to get lost
-			try
-			{
-				if (invoice != null && CustomerContext.GetValue("invoiceKey") == null)
+			try {
+				if (invoice != null && Merchello.Core.StringExtensions.IsNullOrWhiteSpace(CustomerContext.GetValue("invoiceKey")))
 				{
 					LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is NULL. Attempting to set from invoice: " + invoice.Key);
 					CustomerContext.SetValue("invoiceKey", invoice.Key.ToString()); // Re-apply invoiceKey after clearing CheckoutManager so SalesReceipt page still shows the appropriate invoice
@@ -195,18 +209,22 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 
 			LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is: " + invoice.Key);
 
+			Console.WriteLine(CurrentCustomer);
+			//var cm = Basket.GetCheckoutManager(MerchelloConfiguration.Current.CheckoutContextSettings);
+			//Console.WriteLine(cm);
+
 			Basket.Empty();
 			/*
 				WARNING
 				Reset is called in SilentResponse regardless of success or decline payment result. 
 				Do NOT call reset again here as it causes unpredictable results to the customer context and receipt page!
 			*/
-			//ResetAllCheckoutData();
+			ResetAllCheckoutData();
 			
 			// Just to be safe, ensure invoiceKey is present in the CustomerContext in case resetting the Customer or CheckoutManager causes it to get lost
 			try
 			{
-				if (invoice != null && CustomerContext.GetValue("invoiceKey") == null)
+				if (invoice != null && Merchello.Core.StringExtensions.IsNullOrWhiteSpace(CustomerContext.GetValue("invoiceKey")))
 				{
 					LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is NULL. Attempting to set from invoice: " + invoice.Key);
 					CustomerContext.SetValue("invoiceKey", invoice.Key.ToString()); // Re-apply invoiceKey after clearing CheckoutManager so SalesReceipt page still shows the appropriate invoice
@@ -340,30 +358,37 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			return invoice;
 		}
 
-		//private bool ResetAllCheckoutData()
-		//{
-		//	try
-		//	{
+		private bool ResetAllCheckoutData()
+		{
+			try
+			{
+				var customerContext = PluggableObjectHelper.GetInstance<CustomerContextBase>("CustomerContext", UmbracoContext);				
+				var checkoutManager = customerContext.CurrentCustomer.Basket().GetCheckoutManager(MerchelloConfiguration.Current.CheckoutContextSettings);
+				var cm = Basket.GetCheckoutManager(MerchelloConfiguration.Current.CheckoutContextSettings);
+				bool matchingManagers = checkoutManager == cm;
 
-		//		// Reset the Customer's Basket and CheckoutManager data												
-		//		Basket.Empty();
-		//		var checkoutManager = CurrentCustomer.Basket().GetCheckoutManager(); // PayPalExpressController has NO Basket or CheckoutManager references, so maybe this request is what causes the issue?
-		//		Console.WriteLine(checkoutManager.Context.Settings);
-		//		checkoutManager.Customer.Reset(); // TODO Does this ultimately wipe the customer context invoice key?
-		//		checkoutManager.Offer.Reset();
-		//		checkoutManager.Extended.Reset();
-		//		checkoutManager.Payment.Reset();
-		//		checkoutManager.Shipping.Reset();				
-		//	}
-		//	catch(Exception ex)
-		//	{
-		//		LogHelper.Error(typeof(PayTraceRedirectController), "Error encountered while resetting checkout data. ", ex);
-		//		return false;
-		//	}
+				// Leave checkout manager alone
+				//checkoutManager.Customer.Reset();
+				//checkoutManager.Offer.Reset();
+				//checkoutManager.Extended.Reset();
+				//checkoutManager.Payment.Reset();
+				//checkoutManager.Shipping.Reset();
 
-		//	return true;
-			
-		//}
+				// Clear all extendedData including client-specific keys
+				foreach(var key in CurrentCustomer.ExtendedData.Keys)
+				{
+					CurrentCustomer.ExtendedData.RemoveValue(key);
+				}
+			}
+			catch (Exception ex)
+			{
+				LogHelper.Error(typeof(PayTraceRedirectController), "Error encountered while resetting checkout data. ", ex);
+				return false;
+			}
+
+			return true;
+
+		}
 
 		private void Initialize()
 		{
