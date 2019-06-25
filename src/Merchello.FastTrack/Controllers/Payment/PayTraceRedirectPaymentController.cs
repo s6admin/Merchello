@@ -31,6 +31,7 @@
 	using System.Web;
 	using Providers.Models;
 	using Providers.Payment.PayTrace;
+	using Core;
 
 	// S6 This is used for the PayTrace Redirect payment methods, not the Client-side Encryption JSON payment methods
 	// NOTE: The PayPal Express Checkout controller is located in Merchello.Web.Store.Controllers.Payment, not here in Merchello.FastTrack.Controllers.Payment like the other providers?
@@ -206,9 +207,17 @@
 				op += "BCITY~" + WebUtility.UrlEncode(model.BillingAddress.City) + "|";
 				op += "BSTATE~" + WebUtility.UrlEncode(model.BillingAddress.State) + "|";
 				op += "BZIP~" + WebUtility.UrlEncode(model.BillingAddress.Zip) + "|";
-				op += "BCOUNTRY~" + WebUtility.UrlEncode(model.BillingAddress.Country) + "|";
-				op += "EMAIL~" + WebUtility.UrlEncode(model.CustomerEmail) + "|"; // TODO Email is null
-				//op += "PHONE~" + "|"; // Phone isn't present in either Customer or Address details, but might not be important to process the transaction anyway
+				op += "BCOUNTRY~" + WebUtility.UrlEncode(model.BillingAddress.Country) + "|";				
+				op += "EMAIL~" + WebUtility.UrlEncode(model.CustomerEmail) + "|"; 				
+				/* Phone (Billing)
+					Pull from Customer data. If registered could fallback to database record
+				*/
+				IAddress billAddr = CurrentCustomer.ExtendedData.GetAddress(AddressType.Billing);				
+				if(billAddr != null)
+				{
+					op += "PHONE~" + WebUtility.UrlEncode(billAddr.Phone) + "|"; 
+				}
+
 				op += "RETURNPARIS~Y|";
 				op += "ENABLEREDIRECT~Y" + "|";
 				//op += "TEST~Y" + "|";
