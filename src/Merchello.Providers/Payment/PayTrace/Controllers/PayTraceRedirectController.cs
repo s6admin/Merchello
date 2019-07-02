@@ -75,6 +75,16 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 		public static event TypedEventHandler<PayTraceRedirectController, PaymentAttemptEventArgs<IPaymentResult>> Processed;
 
 		/// <summary>
+		/// S6 An event broadcast for external use when the PayTrace Success method hook has been reached.
+		/// </summary>
+		public static event TypedEventHandler<PayTraceRedirectController, PaymentAttemptEventArgs<IInvoice>> OnSuccess;
+
+		/// <summary>
+		/// S6 An event broadcast for external use when the PayTrace Decline method hook has been reached.
+		/// </summary>
+		public static event TypedEventHandler<PayTraceRedirectController, PaymentAttemptEventArgs<IInvoice>> OnDeclined;
+
+		/// <summary>
 		/// Handles a successful payment response from the PayTrace Redirect transaction
 		/// </summary>		
 		/// <returns>
@@ -82,11 +92,23 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 		/// </returns>		
 		public override ActionResult Success(string parmList)
 		{
-			
-			PayTraceRedirectResponse r = PayTraceHelper.ParsePayTraceParamList(parmList);			
+
 			LogHelper.Warn(typeof(PayTraceRedirectController), "PayTraceSuccess received. ParamList: " + parmList);
+
+			PayTraceRedirectResponse r = null;
+
+			try
+			{
+				r =	PayTraceHelper.ParsePayTraceParamList(parmList);
+			} catch(Exception ex)
+			{
+				LogHelper.Error(typeof(PayTraceRedirectController), "Error while parsing PayTrace Success response. ", ex);
+			}
+			
 			var invoice = GetInvoiceByOrderId(r.OrderId);
 
+			OnSuccess.RaiseEvent(new PaymentAttemptEventArgs<IInvoice>(invoice), this);
+			
 			//try
 			//{
 			//	/* 
@@ -148,6 +170,9 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 
 			LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey before receipt redirect: " + invoice.Key);
 
+			// Set generic flag so front-end project will know the redirecting page is part of a checkout transaction.
+			TempData.Add("checkoutReceipt", true);
+
 			var redirecting = new PaymentRedirectingUrl("Success") { RedirectingToUrl = _successUrl };
 			
 			return Redirect(redirecting.RedirectingToUrl); 
@@ -163,13 +188,24 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			/*
 			/declined?parmList=OrderID~2019020504440768%7CAuthKey~7487400%7CEMAIL~test%40test%2Etest%7C
 			*/
-			
-			PayTraceRedirectResponse r = PayTraceHelper.ParsePayTraceParamList(parmList);
 			LogHelper.Warn(typeof(PayTraceRedirectController), "PayTraceDeclined received. ParamList: " + parmList);
 
+			PayTraceRedirectResponse r = null;
+
+			try
+			{
+				r = PayTraceHelper.ParsePayTraceParamList(parmList);
+			} catch(Exception ex)
+			{
+				LogHelper.Error(typeof(PayTraceRedirectController), "Error while parsing PayTrace declined response. ", ex);
+			}
+			
+			
 			// _declinedUrl is available, but _successUrl is set to Receipt page by default which will still be shown to customers after a decline but with additional details about their unpaid order
 			var redirecting = new PaymentRedirectingUrl("Declined") { RedirectingToUrl = _successUrl };
 			var invoice = GetInvoiceByOrderId(r.OrderId);
+
+			OnDeclined.RaiseEvent(new PaymentAttemptEventArgs<IInvoice>(invoice), this);
 
 			try
 			{
@@ -240,6 +276,9 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 
 			LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey before receipt redirect: " + invoice.Key);
 
+			// Set generic flag so front-end project will know the redirecting page is part of a checkout transaction.
+			TempData.Add("checkoutReceipt", true);
+
 			return Redirect(redirecting.RedirectingToUrl);
 		}
 
@@ -249,10 +288,19 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			// NOTE: Customer/Basket contexts are out of scope here so any actions related to checkout don't do anything. Use Success() instead for tasks like resetting CheckoutManager and the basket.
 			// Invoice and/or database tasks should still be performed
 
-			PayTraceRedirectSilentResponse r = PayTraceHelper.ParsePayTraceSilentParamList(parmList);
-
 			LogHelper.Warn(typeof(PayTraceRedirectController), "PayTraceSilentResponse received. ParamList: " + parmList);
 
+			PayTraceRedirectSilentResponse r = null;
+
+			try
+			{
+				r = PayTraceHelper.ParsePayTraceSilentParamList(parmList);
+			}
+			catch(Exception ex)
+			{
+				LogHelper.Error(typeof(PayTraceRedirectController), "Error while parsing PayTrace silent response. ", ex);
+			}
+			
 			/* 
 				NOTE: PayTrace example docs are missing some properties. The full param list returned includes:
 
@@ -304,19 +352,16 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 				record.Data.TRANSACTIONID = r.TransactionId;							
 				//promiseRecord.Data.Token = PayTrace AuthKey is not available in this call so it is saved in the Success handler
 
-				payment.SavePayTraceTransactionRecord(record); // Save data changes to ExtendedData
+				payment.SavePayTraceTransactionRecord(record); // Save data changes to ExtendedData regardless of payment success/failure
 				
-				/* NOTE Following the default eComm pattern means OnFinalizing is only called if the payment provider returns a success.
-					This might not align with client business requirements since they want all orders to be "accepted" even if payment is
-					declined. OnFinalizing requires a captureAttempt, though, which is a catch 22.
-					At the very least in case of a payment failure, the checkoutManager ultimately needs to be reset, but without interfering 
-					with the SalesReceipt that needs a persisted InvoiceKey.
-				*/
+				// TODO Maybe need a way to save the entire payment object so the record details aren't lost if the payment method failed (no capture attempt happens)
+				//GatewayProviderService.Save(payment);
+
 				if (r.Success)
 				{
 					// We can now capture the payment													
 					var captureAttempt = invoice.CapturePayment(payment, _paymentMethod, invoice.Total);
-
+					
 					// Raise the event to process the email
 					Processed.RaiseEvent(new PaymentAttemptEventArgs<IPaymentResult>(captureAttempt), this);
 					
@@ -337,7 +382,19 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 				{
 					// PayTrace returned a failure. The record details have been saved to the main Payment data but don't create an Applied Payment
 					LogHelper.Warn(typeof(PayTraceRedirectController), "PayTrace Redirect payment for order " + r.OrderId + " was flagged as unsuccessful. Please review merchant logs for additional details.");
-				}				
+
+					/*
+					Basic retry logic from PayPalExpressController. May not be usable in current form with PayTraceRedirect provider
+					 var retrying = new PaymentRedirectingUrl("Cancel") { RedirectingToUrl = _cancelUrl };
+					var qs = string.Format("?invoicekey={0}&paymentkey={1}", invoiceKey, paymentKey);
+					if (!retrying.RedirectingToUrl.IsNullOrWhiteSpace()) return Redirect(retrying.RedirectingToUrl + qs);
+
+					var invalidOp = new InvalidOperationException("Retry url was not specified");
+
+					MultiLogHelper.Error<PayPalExpressController>("Could not redirect to retry", invalidOp);
+					throw invalidOp;
+					*/
+				}
 			}
 			catch (Exception ex)
 			{
@@ -408,9 +465,8 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			}
 
 			// instantiate the service
-			_paytraceService = new PayTraceRedirectService(provider.ExtendedData.GetPayTraceRedirectProviderSettings());
-
 			var settings = provider.ExtendedData.GetPayTraceRedirectProviderSettings();
+			_paytraceService = new PayTraceRedirectService(settings);			
 			_successUrl = settings.EndUrl; 
 			//_cancelUrl = settings.CancelUrl;
 			_declinedUrl = settings.DeclinedUrl;

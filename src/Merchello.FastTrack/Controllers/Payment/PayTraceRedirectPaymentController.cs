@@ -32,6 +32,7 @@
 	using Providers.Models;
 	using Providers.Payment.PayTrace;
 	using Core;
+	using static Core.Constants;
 
 	// S6 This is used for the PayTrace Redirect payment methods, not the Client-side Encryption JSON payment methods
 	// NOTE: The PayPal Express Checkout controller is located in Merchello.Web.Store.Controllers.Payment, not here in Merchello.FastTrack.Controllers.Payment like the other providers?
@@ -201,6 +202,7 @@
 
 				//op += "HIDEPASSWORD~Y|"; // Does other stuff with the OrderId that might be unwanted, so prefer disablelogin instead
 				op += "DISABLELOGIN~Y|";
+				op += "DISABLERECEIPT~Y|";
 				op += "BNAME~" + WebUtility.UrlEncode(model.BillingAddress.Name) + "|";
 				op += "BADDRESS~" + WebUtility.UrlEncode(model.BillingAddress.StreetAddress) + "|";
 				op += "BADDRESS2~" + WebUtility.UrlEncode(model.BillingAddress.StreetAddress2) + "|";
@@ -219,7 +221,7 @@
 				}
 
 				op += "RETURNPARIS~Y|";
-				op += "ENABLEREDIRECT~Y" + "|";
+				op += "ENABLEREDIRECT~Y" + "|";				
 				//op += "TEST~Y" + "|";
 
 				// Parameter structure
@@ -231,6 +233,7 @@
 				return Redirect(url);
 			} else
 			{
+				ViewData["paytraceRedirectError"] = true; // Provide error flag that front-end project can respond to
 				return CurrentUmbracoPage();
 			}
 		}
@@ -294,16 +297,27 @@
 				LogHelper.Error(typeof(PayTraceRedirectPaymentController), ex.Message, ex);
 				return string.Empty;
 			}
-			
+
 			// get response and parse
-			WebResponse response = request.GetResponse();
-			Stream rsp_stream = response.GetResponseStream();
-			StreamReader reader = new StreamReader(rsp_stream);
+			WebResponse response = null;
+			Stream rsp_stream = null;
+			StreamReader reader = null;
+
+			// Try/catch will handle unexpected 500 Internal errors returned by the payment provider such as during service outages
+			try
+			{				
+				response = request.GetResponse();
+				rsp_stream = response.GetResponseStream();
+				reader = new StreamReader(rsp_stream);
+			} catch(Exception ex)
+			{
+				LogHelper.Error(typeof(PayTraceRedirectPaymentController), "Error during Web Response processing. ", ex);
+			}			
 
 			// read the response string
-			string strResponse = reader.ReadToEnd();
+			string strResponse = reader != null ? reader.ReadToEnd() : string.Empty;
 
-			if (ParsePayTraceResponse(strResponse))
+			if (!strResponse.IsNullOrWhiteSpace() && ParsePayTraceResponse(strResponse))
 			{
 				string url = "https://paytrace.com/api/checkout.pay?parmList=orderID~{0}|AuthKey~{1}|";
 				try
