@@ -6,24 +6,15 @@
 @using Merchello.FastTrack.Controllers.Payment;
 @using Merchello.FastTrack.Ui;
 @using Merchello.Web.Models.Ui;
-@using SMO.Code.Constants;
 
-@{ 
+@{
 	string formId = "frm-redirect";
 }
-@* TODO Remove S6-specific code/partial dependencies so this paymentform can be used by generic Merchello *@
+
 <h3 class="subheader">PayTrace Redirect</h3>
 <p>Please review your order details then press the button to provide your payment information.</p>
-
 @using (Html.BeginUmbracoForm<PayTraceRedirectPaymentController>("HandlePaymentForm", new { area = "FastTrack" }, new { @id = formId }))
 {
-	@Html.AntiForgeryToken()
-	@Html.CachedPartial("partials/s6oneclickbutton", Model, Time.ONE_MONTH, true, false,
-	new ViewDataDictionary() {
-		{ "id", "btnContinue" },
-		{"inputTag", "true" },
-		{ "form", formId },
-		{"class", "btn btn-default green" },
-		{ "label", "Continue" }
-	})
+	@Html.AntiForgeryToken()	
+	@Html.Partial("_RequireJsSubmitBtn", Model)	
 }

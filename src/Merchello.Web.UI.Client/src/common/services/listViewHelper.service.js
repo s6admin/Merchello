@@ -47,23 +47,24 @@ angular.module('merchello.services').service('merchelloListViewHelper',
             invoice: {
                 columns: [
                     { name: 'invoiceNumber', localizeKey: 'merchelloSales_invoiceNumber' },
+					{ name: 'poNumber', localizeKey: 'merchelloSales_poNumber' }, // S6 Added poNumber
                     { name: 'invoiceDate', localizeKey: 'general_date' },
                     { name: 'billToName', localizeKey: 'merchelloGeneral_customer' },
                     { name: 'paymentStatus', localizeKey: 'merchelloSales_paymentStatus', resultColumn: true },
-                    { name: 'fulfillmentStatus', localizeKey: 'merchelloOrder_fulfillmentStatus', resultColumn: true },
+                    //{ name: 'fulfillmentStatus', localizeKey: 'merchelloOrder_fulfillmentStatus', resultColumn: true }, // S6 Removed fulfillmentStatus
                     { name: 'total', localizeKey: 'merchelloGeneral_total' }
                 ],
-                pageSize: 10,
+                pageSize: 100,
                 orderBy: 'invoiceNumber',
                 orderDirection: 'desc'
             },
 
             saleshistory: {
                 columns: [
-                    { name: 'invoiceNumber', localizeKey: 'merchelloSales_invoiceNumber' },
+                    { name: 'invoiceNumber', localizeKey: 'merchelloSales_invoiceNumber' },					
                     { name: 'invoiceDate', localizeKey: 'general_date' },
                     { name: 'paymentStatus', localizeKey: 'merchelloSales_paymentStatus', resultColumn: true },
-                    { name: 'fulfillmentStatus', localizeKey: 'merchelloOrder_fulfillmentStatus', resultColumn: true },
+                    { name: 'fulfillmentStatus', localizeKey: 'merchelloOrder_fulfillmentStatus', resultColumn: true }, // S6 Removed fulfillmentStatus
                     { name: 'total', localizeKey: 'merchelloGeneral_total' }
                 ],
                 orderBy: 'invoiceNumber',

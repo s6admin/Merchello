@@ -36,6 +36,8 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 		public string CardExpireYear { get; set; }
 
 		public string CardLastFour { get; set; }
+
+		public decimal Amount { get; set; }
 	}
 
 	/// <summary>

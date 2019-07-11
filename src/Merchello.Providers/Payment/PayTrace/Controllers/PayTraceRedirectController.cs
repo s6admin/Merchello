@@ -62,27 +62,26 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 		/// </summary>
 		public static event TypedEventHandler<PayTraceRedirectController, ObjectEventArgs<PaymentRedirectingUrl>> RedirectingForCancel;
 
-		// S6 So OnFinalizing can be broadcast after a redirect payment has been successfully detected
+		// S6: So OnFinalizing can be broadcast after a redirect payment has been successfully detected
 		//public static event TypedEventHandler<CheckoutPaymentManagerBase, CheckoutEventArgs<IPaymentResult>> Finalizing;
 		public static event TypedEventHandler<PayTraceRedirectController, CheckoutEventArgs<IPaymentResult>> Finalizing;
 
 		/// <summary>
 		/// Occurs after the final redirection and before redirecting to the success URL
 		/// </summary>
-		/// <remarks>
-		/// Can be used to send OrderConfirmation notification
+		/// <remarks>		
 		/// </remarks>
-		public static event TypedEventHandler<PayTraceRedirectController, PaymentAttemptEventArgs<IPaymentResult>> Processed;
+		public static event TypedEventHandler<PayTraceRedirectController, PaymentAttemptEventArgs<PayTraceRedirectSilentResponse>> Processed;
 
 		/// <summary>
 		/// S6 An event broadcast for external use when the PayTrace Success method hook has been reached.
 		/// </summary>
-		public static event TypedEventHandler<PayTraceRedirectController, PaymentAttemptEventArgs<IInvoice>> OnSuccess;
+		public static event TypedEventHandler<PayTraceRedirectController, PaymentAttemptEventArgs<PayTraceRedirectResponse>> OnSuccess;
 
 		/// <summary>
 		/// S6 An event broadcast for external use when the PayTrace Decline method hook has been reached.
 		/// </summary>
-		public static event TypedEventHandler<PayTraceRedirectController, PaymentAttemptEventArgs<IInvoice>> OnDeclined;
+		public static event TypedEventHandler<PayTraceRedirectController, PaymentAttemptEventArgs<PayTraceRedirectResponse>> OnDeclined;
 
 		/// <summary>
 		/// Handles a successful payment response from the PayTrace Redirect transaction
@@ -106,72 +105,39 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			}
 			
 			var invoice = GetInvoiceByOrderId(r.OrderId);
-
-			OnSuccess.RaiseEvent(new PaymentAttemptEventArgs<IInvoice>(invoice), this);
 			
-			//try
-			//{
-			//	/* 
-			//		REMOVED: Client has determined AuthKey is not necessary so we only need to handle the Success redirect
-			//		Get payment and add AuthKey (Token) to its ExtendedData, this can only be done here because it is the only place the AuthKey parameter is returned from PayTrace
-			//	*/
-			//	//var invoice = GetInvoiceByOrderId(r.OrderId);
-			//	//var payment = invoice.Payments().FirstOrDefault(x => x.Amount == invoice.Total && x.Authorized);
-			//	//var record = payment.GetPayTraceTransactionRecord();
-			//	//record.Data.AUTHKEY = r.Token; // PayTrace AuthKey, which is only passed to success, not the silent response
-
-			//	//payment.SavePayTraceTransactionRecord(record);
-
-			//} catch(Exception ex)
-			//{
-			//	MultiLogHelper.Error<PayTraceRedirectController>(ex.Message, ex);
-			//}
-
-			// CurrentCustomer is correct here so why does resetting the checkoutmanager cause issues with the customer context/sales receipt!?
-			Console.WriteLine(CurrentCustomer);
-
+			OnSuccess.RaiseEvent(new PaymentAttemptEventArgs<PayTraceRedirectResponse>(r), this);			
+			
 			var cm = CustomerContext.CurrentCustomer.Basket().GetCheckoutManager(MerchelloConfiguration.Current.CheckoutContextSettings);
             Console.WriteLine(cm);
-
-			// Incorrect
-			//var cm = Basket.GetCheckoutManager(MerchelloConfiguration.Current.CheckoutContextSettings);
-			//Console.WriteLine(cm);
-			//cm.Reset();
-
-			LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is: " + invoice.Key);
-
+			
 			Basket.Empty();
-			/*
-				WARNING				
-				Resetting CheckoutManager here ends up triggering some kind of Customer Context issue while redirecting to the Sales Receipt page for Registered Customers
-				so they see the wrong invoice displayed. Doesn't seem to occur for Anonymous Customers, however.
-			*/
+			
 			ResetAllCheckoutData();
-			
-			//CustomerContext.Reinitialize(CustomerContext.CurrentCustomer); // Attempt to reset customer context after resetting checkoutmanager but BEFORE ensuring invoiceKey
-			
-			// Just to be safe, ensure invoiceKey is present in the CustomerContext in case resetting the Customer or CheckoutManager causes it to get lost
-			try {
-				if (invoice != null && Merchello.Core.StringExtensions.IsNullOrWhiteSpace(CustomerContext.GetValue("invoiceKey")))
-				{
-					LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is NULL. Attempting to set from invoice: " + invoice.Key);
-					CustomerContext.SetValue("invoiceKey", invoice.Key.ToString()); // Re-apply invoiceKey after clearing CheckoutManager so SalesReceipt page still shows the appropriate invoice
-					LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is now: " + invoice.Key);
-				}
-				else
-				{
-					LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey retained: " + invoice.Key);
-				}
-			}
-			catch (Exception ex)
+
+			// Ensure invoiceKey is present in the CustomerContext in case resetting the Customer or CheckoutManager causes it to get lost
+			if (invoice != null)
 			{
-				LogHelper.Error(typeof(PayTraceRedirectController), "Error setting Customer Context Invoice Key. ", ex);
+				try
+				{
+
+					if (Merchello.Core.StringExtensions.IsNullOrWhiteSpace(CustomerContext.GetValue("invoiceKey")))
+					{
+						//LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is NULL. Attempting to set from invoice: " + invoice.Key);
+						CustomerContext.SetValue("invoiceKey", invoice.Key.ToString()); // Re-apply invoiceKey after clearing CheckoutManager so SalesReceipt page still shows the appropriate invoice
+						LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey set: " + invoice.Key);
+					}
+					else
+					{
+						LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey retained: " + invoice.Key);
+					}
+
+				}
+				catch (Exception ex)
+				{
+					LogHelper.Error(typeof(PayTraceRedirectController), "Error setting Customer Context Invoice Key. ", ex);
+				}
 			}
-
-			LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey before receipt redirect: " + invoice.Key);
-
-			// Set generic flag so front-end project will know the redirecting page is part of a checkout transaction.
-			TempData.Add("checkoutReceipt", true);
 
 			var redirecting = new PaymentRedirectingUrl("Success") { RedirectingToUrl = _successUrl };
 			
@@ -205,7 +171,7 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			var redirecting = new PaymentRedirectingUrl("Declined") { RedirectingToUrl = _successUrl };
 			var invoice = GetInvoiceByOrderId(r.OrderId);
 
-			OnDeclined.RaiseEvent(new PaymentAttemptEventArgs<IInvoice>(invoice), this);
+			OnDeclined.RaiseEvent(new PaymentAttemptEventArgs<PayTraceRedirectResponse>(r), this);						
 
 			try
 			{
@@ -243,7 +209,7 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 
 			// https://our.umbraco.com/packages/collaboration/merchello/merchello/85200-invoice-items-missing-in-second-order
 
-			LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is: " + invoice.Key);
+			//LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is: " + invoice.Key);
 
 			Console.WriteLine(CurrentCustomer);
 			//var cm = Basket.GetCheckoutManager(MerchelloConfiguration.Current.CheckoutContextSettings);
@@ -257,28 +223,28 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			*/
 			ResetAllCheckoutData();
 			
-			// Just to be safe, ensure invoiceKey is present in the CustomerContext in case resetting the Customer or CheckoutManager causes it to get lost
-			try
+			// Ensure invoiceKey is present in the CustomerContext in case resetting the Customer or CheckoutManager causes it to get lost
+			if(invoice != null)
 			{
-				if (invoice != null && Merchello.Core.StringExtensions.IsNullOrWhiteSpace(CustomerContext.GetValue("invoiceKey")))
+				try
 				{
-					LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is NULL. Attempting to set from invoice: " + invoice.Key);
-					CustomerContext.SetValue("invoiceKey", invoice.Key.ToString()); // Re-apply invoiceKey after clearing CheckoutManager so SalesReceipt page still shows the appropriate invoice
-					LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is now: " + invoice.Key);
-				} else
-				{
-					LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey retained: " + invoice.Key);
+					if (invoice != null && Merchello.Core.StringExtensions.IsNullOrWhiteSpace(CustomerContext.GetValue("invoiceKey")))
+					{
+						LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is NULL. Attempting to set from invoice: " + invoice.Key);
+						CustomerContext.SetValue("invoiceKey", invoice.Key.ToString()); // Re-apply invoiceKey after clearing CheckoutManager so SalesReceipt page still shows the appropriate invoice
+						LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey is now: " + invoice.Key);
+					}
+					else
+					{
+						LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey retained: " + invoice.Key);
+					}
 				}
-			} catch(Exception ex)
-			{
-				LogHelper.Error(typeof(PayTraceRedirectController), "Error setting Customer Context Invoice Key. ", ex);
-			}
-
-			LogHelper.Warn(typeof(PayTraceRedirectController), "CustomerContext InvoiceKey before receipt redirect: " + invoice.Key);
-
-			// Set generic flag so front-end project will know the redirecting page is part of a checkout transaction.
-			TempData.Add("checkoutReceipt", true);
-
+				catch (Exception ex)
+				{
+					LogHelper.Error(typeof(PayTraceRedirectController), "Error setting Customer Context Invoice Key. ", ex);
+				}
+			}			
+			
 			return Redirect(redirecting.RedirectingToUrl);
 		}
 
@@ -301,6 +267,13 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 				LogHelper.Error(typeof(PayTraceRedirectController), "Error while parsing PayTrace silent response. ", ex);
 			}
 			
+			if(r == null)
+			{
+				Exception ex = new Exception("Could not parse PayTraceSilentResponse data. Response data is null! Nothing to process.");
+				LogHelper.Error(typeof(PayTraceRedirectController), ex.Message, ex);
+				return;
+			}
+
 			/* 
 				NOTE: PayTrace example docs are missing some properties. The full param list returned includes:
 
@@ -312,9 +285,19 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 
 			try
 			{
+
+				// The Processed handler triggers each time a response is received from the payment provider, regardless of if a capture payment is attempted or not
+				Processed.RaiseEvent(new PaymentAttemptEventArgs<PayTraceRedirectSilentResponse>(r), this);
+								
 				// Record all PayTrace response values regardless of payment success/failure
 				var invoice = GetInvoiceByOrderId(r.OrderId); 
 				
+				if(invoice == null)
+				{
+					LogHelper.Warn(typeof(PayTraceRedirectController), "Could not find matching invoice for PayTrace Silent Response " + r.OrderId + ". Attempt to capture payment skipped.");					
+					return;
+				}
+
 				var payments = invoice.Payments();
 				if(payments == null || !payments.Any())
 				{
@@ -323,6 +306,8 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 					MultiLogHelper.Error(typeof(PayTraceRedirectController), ex.Message, ex);					
 					return;
 				}
+				
+				// NOTE For V1 client has confirmed no partial payments are necessary but that may change in the future so using the silent response AMOUNT (not just the invoice.Total) will be important
 								
 				// Retrieve initial promise payment
 				var payment = payments.FirstOrDefault(x => x.Amount == invoice.Total && !x.Authorized);
@@ -349,22 +334,17 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 				record.Data.EXPYR = r.CardExpireYear;
 				record.Data.LAST4 = r.CardLastFour;
 				record.Data.BNAME = r.BillingName;
-				record.Data.TRANSACTIONID = r.TransactionId;							
+				record.Data.TRANSACTIONID = r.TransactionId;
+				record.Data.AMOUNT = r.Amount;					
 				//promiseRecord.Data.Token = PayTrace AuthKey is not available in this call so it is saved in the Success handler
 
 				payment.SavePayTraceTransactionRecord(record); // Save data changes to ExtendedData regardless of payment success/failure
 				
-				// TODO Maybe need a way to save the entire payment object so the record details aren't lost if the payment method failed (no capture attempt happens)
-				//GatewayProviderService.Save(payment);
-
 				if (r.Success)
 				{
 					// We can now capture the payment													
 					var captureAttempt = invoice.CapturePayment(payment, _paymentMethod, invoice.Total);
-					
-					// Raise the event to process the email
-					Processed.RaiseEvent(new PaymentAttemptEventArgs<IPaymentResult>(captureAttempt), this);
-					
+										
 					if (captureAttempt.Payment.Success)
 					{
 

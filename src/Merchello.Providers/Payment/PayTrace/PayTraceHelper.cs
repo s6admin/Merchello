@@ -134,6 +134,9 @@
 						case MC.Constants.PayTraceRedirect.ResponseKeys.CardLastFour:
                             r.CardLastFour = arrPair[1];
 							break;
+						case MC.Constants.PayTraceRedirect.ResponseKeys.Amount:
+							r.Amount = Convert.ToDecimal(arrPair[1]);
+							break;
 					}
 					
                 }

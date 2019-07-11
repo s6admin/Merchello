@@ -56,6 +56,8 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 
 		public string LAST4 { get; set; }
 
+		public decimal AMOUNT { get; set; }
+
 		/// <summary>
 		/// Gets or sets a value indicating whether the transaction was authorized on the provider's end
 		/// </summary>

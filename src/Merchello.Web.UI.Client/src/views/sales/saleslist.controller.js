@@ -97,7 +97,13 @@ angular.module('merchello').controller('Merchello.Backoffice.SalesListController
                     case 'fulfillmentStatus':
                         return getFulfillmentStatus(result);
                     case 'total':
-                        return $filter('currency')(result.total, getCurrencySymbol(result));
+                    	return $filter('currency')(result.total, getCurrencySymbol(result));
+                	case 'poNumber': // S6 Added poNumber
+                		if (result.invoiceNumberPrefix !== '') {
+                			return '<a href="' + getEditUrl(result) + '">' + result.poNumber + '</a>';
+                		} else {
+                			return '<a href="' + getEditUrl(result) + '">' + result.poNumber + '</a>';
+                		}
                     default:
                         return result[col.name];
                 }

@@ -242,6 +242,7 @@ namespace Merchello.Providers
 				public const string CardExpireMonth = "EXPMNTH";
 				public const string CardExpireYear = "EXPYR";
 				public const string CardLastFour = "LAST4";
+				public const string Amount = "AMOUNT";
 				public const string BillingName = "BNAME";
 
 			}
