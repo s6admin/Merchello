@@ -70,7 +70,7 @@
             }
             catch (Exception ex)
             {
-                // MultiLogHelper.Info<ProductDisplayValueConverter>("Failed to Convert ProductDisplay property");
+                // MultiLogHelper.Info<ProductDisplayValueConverter>("Failed to Convert ProductDisplay property"); // S6 stop logging this b/c it isn't important and happens all the time. Need to check forums for thread regarding why the front-end always has this issue
                 return null;
             }
         }

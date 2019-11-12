@@ -580,7 +580,7 @@
         /// The count the invoices.
         /// </returns>
         public IEnumerable<IInvoice> GetInvoicesByDateRange(DateTime startDate, DateTime endDate)
-        {
+        {					
             using (var repository = RepositoryFactory.CreateInvoiceRepository(UowProvider.GetUnitOfWork()))
             {
                 var query = Persistence.Querying.Query<IInvoice>.Builder.Where(x => x.InvoiceDate >= startDate && x.InvoiceDate <= endDate);

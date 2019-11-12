@@ -13,9 +13,14 @@
 	using System.Web;
 	using Merchello.Core.Logging;
 	using MC = Merchello.Providers;
+	using Core.Models;
+	using Umbraco.Core.Logging;
 
 	public class PayTraceHelper
 	{
+
+		private static string PAYTRACE_ORDER_ID_DELIMITER = "_";
+
 		// ISSUE: GetProviderByKey definition can't be seen in this scope
 		public static PayTraceRedirectProviderSettings GetProviderSettings()
 		{
@@ -91,7 +96,8 @@
 					switch (arrPair[0].ToUpper())
 					{
 						case MC.Constants.PayTraceRedirect.ResponseKeys.OrderId:
-							r.OrderId = arrPair[1];
+							r.OrderId = arrPair[1]; 
+							r.InvoiceKey = GetInvoiceKeyFromPayTraceOrderId(arrPair[1]);
 							break;
 						//case "RESPONSE": // This isn't in the list of returns
 						//	r.ResponseMessage = arrPair[1];
@@ -171,7 +177,8 @@
 					switch (arrPair[0].ToUpper())
 					{
 						case MC.Constants.PayTraceRedirect.ResponseKeys.OrderId:
-                            r.OrderId = arrPair[1];
+							r.OrderId = arrPair[1]; 
+							r.InvoiceKey = GetInvoiceKeyFromPayTraceOrderId(arrPair[1]);
 							break;
 						case MC.Constants.PayTraceRedirect.ResponseKeys.AuthKey:
                             r.Token = arrPair[1];
@@ -191,6 +198,54 @@
 			}
 
 			return r;
+		}
+
+		public static string SetPayTraceOrderId(IInvoice invoice)
+		{
+			// Version 1: Original PayTrace OrderId was solely the Invoice PONumber
+			//return invoice.PoNumber;
+
+			// Version 2: Apply special OrderId for PayTrace so responses return an Invoice Key (strong reference) and not PONumber (soft reference)
+
+			string ptid = string.Empty;
+
+			if (invoice == null)
+			{
+				return ptid;
+			}
+
+			try
+			{
+				// Assume PONumber format is already v2 format (two digit year, four millisecond digits)			
+				ptid = invoice.PoNumber + PAYTRACE_ORDER_ID_DELIMITER + invoice.Key.ToString().Replace("-", "");
+			}
+			catch (Exception ex)
+			{
+				LogHelper.Error(typeof(PayTraceHelper), "Error generating PayTrace Order Id for invoice " + invoice.Key, ex);
+				return string.Empty;
+			}
+
+			return ptid;
+		}
+
+		public static Guid GetInvoiceKeyFromPayTraceOrderId(string payTraceOrderId)
+		{
+
+			string guidStr = payTraceOrderId.Substring(payTraceOrderId.IndexOf(PAYTRACE_ORDER_ID_DELIMITER) + PAYTRACE_ORDER_ID_DELIMITER.Length);
+
+			Guid g = Guid.Empty;
+
+			if (Guid.TryParse(guidStr, out g))
+			{
+				return g; // Success
+			}
+			else
+			{
+				Exception ex = new Exception("No Guid found in payTraceOrderId value.");
+				LogHelper.Error(typeof(PayTraceHelper), "Could not parse Guid from PayTraceOrderId " + payTraceOrderId, ex);
+			}
+
+			return g; // Will return Guid.Empty
 		}
 	}
 }

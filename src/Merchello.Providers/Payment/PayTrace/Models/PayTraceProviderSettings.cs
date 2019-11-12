@@ -20,7 +20,7 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 		/// The default return URL that a Canceled PayTrace Redirect transaction should call.
 		/// </summary>
 		//private const string DefaultCancelUrl = "{0}/umbraco/merchello/paytraceredirect/cancel";
-
+		                                                    
 		private const string DefaultSilentResponseUrl = "{0}/umbraco/merchello/paytraceredirect/paytracesilentresponse"; // Params are sent and defined by PayTrace
 				
 		private const string DefaultRetryUrl = "{0}/umbraco/merchello/paytraceredirect/retry";

@@ -48,7 +48,7 @@
 		private const string DefaultCancelUrl = "";
 
 		private const string DefaultDeclineUrl = "";
-		       
+		
 		public PayTraceRedirectPaymentController()
 			: base(new PayTraceRedirectPaymentModelFactory<PayTraceRedirectPaymentModel>())
 		{ }
@@ -141,9 +141,15 @@
 				model.TaxAmount = attempt.Invoice.TotalTax();
 
 				// https://our.umbraco.com/packages/collaboration/merchello/merchello/72986-non-inline-payment-provider				
-				if (attempt.Invoice.PoNumber != null && attempt.Invoice.PoNumber.Length > 0)
+				if (attempt.Invoice.PoNumber != null && attempt.Invoice.PoNumber.Length > 0 && !attempt.Invoice.Key.Equals(Guid.Empty))
 				{
-					model.OrderNumber = attempt.Invoice.PoNumber;
+					// Original PayTrace OrderId was solely the PONumber
+					model.OrderNumber = PayTraceHelper.SetPayTraceOrderId(attempt.Invoice); // TODO New OrderId format for PayTrace starting mid 11/2019
+					if (model.OrderNumber.IsNullOrWhiteSpace())
+					{
+						var ex = new Exception("Could not generate PayTrace Order Id for invoice " + attempt.Invoice.Key);
+						return HandlePaymentException(model, ex);
+					}
 				}
 			}
 			
@@ -155,8 +161,8 @@
 			string parameters = string.Empty;
 			string username = !apiuser.IsNullOrWhiteSpace() ? apiuser : ApiAccessCredentials.UserName;
 			string passw = !apipswd.IsNullOrWhiteSpace() ? apipswd : ApiAccessCredentials.Password;
-
-            parameters += "UN~" + username + "|";
+			
+			parameters += "UN~" + username + "|";
 			parameters += "PSWD~" + passw + "|";
 			parameters += "ORDERID~" + model.OrderNumber + "|";
 			parameters += "AMOUNT~" + model.Amount + "|";
@@ -237,7 +243,7 @@
 				return CurrentUmbracoPage();
 			}
 		}
-
+		
 		protected override ActionResult HandlePaymentException(PayTraceRedirectPaymentModel model, Exception ex)
 		{
 
@@ -317,7 +323,7 @@
 			// read the response string
 			string strResponse = reader != null ? reader.ReadToEnd() : string.Empty;
 
-			if (!strResponse.IsNullOrWhiteSpace() && ParsePayTraceResponse(strResponse))
+			if (!strResponse.IsNullOrWhiteSpace() && ParsePayTraceValidationResponse(strResponse))
 			{
 				string url = "https://paytrace.com/api/checkout.pay?parmList=orderID~{0}|AuthKey~{1}|";
 				try
@@ -337,7 +343,7 @@
 			return string.Empty; // Problem(s) with validation call or redirect url prep
 		}
 		
-		private bool ParsePayTraceResponse(string strResponse)
+		private bool ParsePayTraceValidationResponse(string strResponse)
 		{
 			// if we have errors if so output to ui
 			if (!strResponse.Contains("ERROR"))

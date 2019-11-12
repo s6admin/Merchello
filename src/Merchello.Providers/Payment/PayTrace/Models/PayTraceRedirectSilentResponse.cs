@@ -15,6 +15,8 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 
 		public string OrderId { get; set; }
 
+		public Guid InvoiceKey { get; set; }
+
 		public string TransactionId { get; set; }
 
 		public string AppCode { get; set; }

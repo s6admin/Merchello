@@ -18,6 +18,8 @@ namespace Merchello.Providers.Payment.PayTrace.Models
 
 		public string OrderId { get; set; }
 
+		public Guid InvoiceKey { get; set; }
+
 		public string Token { get; set; }
 
 		public string Email { get; set; }

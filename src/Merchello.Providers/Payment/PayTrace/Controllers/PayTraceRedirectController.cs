@@ -103,13 +103,13 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			{
 				LogHelper.Error(typeof(PayTraceRedirectController), "Error while parsing PayTrace Success response. ", ex);
 			}
-			
-			var invoice = GetInvoiceByOrderId(r.OrderId);
-			
+
+			var invoice = GetInvoiceByKey(r.InvoiceKey); // GetInvoiceByKey(r.OrderId); v2 use new InvoiceKey
+
 			OnSuccess.RaiseEvent(new PaymentAttemptEventArgs<PayTraceRedirectResponse>(r), this);			
 			
-			var cm = CustomerContext.CurrentCustomer.Basket().GetCheckoutManager(MerchelloConfiguration.Current.CheckoutContextSettings);
-            Console.WriteLine(cm);
+			//var cm = CustomerContext.CurrentCustomer.Basket().GetCheckoutManager(MerchelloConfiguration.Current.CheckoutContextSettings);
+            //Console.WriteLine(cm);
 			
 			Basket.Empty();
 			
@@ -169,25 +169,10 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			
 			// _declinedUrl is available, but _successUrl is set to Receipt page by default which will still be shown to customers after a decline but with additional details about their unpaid order
 			var redirecting = new PaymentRedirectingUrl("Declined") { RedirectingToUrl = _successUrl };
-			var invoice = GetInvoiceByOrderId(r.OrderId);
+			var invoice = GetInvoiceByKey(r.InvoiceKey); // GetInvoiceByKey(r.OrderId) v2 OrderId is compound value, use new property invoiceKey which contains the deconstructed guid
 
 			OnDeclined.RaiseEvent(new PaymentAttemptEventArgs<PayTraceRedirectResponse>(r), this);						
-
-			try
-			{
-				
-				var payment = invoice.Payments().FirstOrDefault();
-				Guid methodKey = payment.PaymentMethodKey ?? Guid.Empty; // VoidPayment() requires a non-nullable Guid
-				if (!methodKey.Equals(Guid.Empty))
-				{
-					//payment.VoidPayment(invoice, methodKey);
-				}				
-			}
-			catch (Exception ex)
-			{
-				LogHelper.Error(typeof(PayTraceRedirectController), ex.Message, ex);
-			}
-
+			
 			/* 
 				Keep track of the failed attempts in the Customer data so the next checkout step is aware of the payment failure(s)			
 				For v1 the Invoice UNPAID Status is used to indicate if a message should be displayed on the SalesReceipt page but
@@ -226,6 +211,21 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			// Ensure invoiceKey is present in the CustomerContext in case resetting the Customer or CheckoutManager causes it to get lost
 			if(invoice != null)
 			{
+				//try
+				//{
+
+				//	var payment = invoice.Payments().FirstOrDefault();
+				//	Guid methodKey = payment.PaymentMethodKey ?? Guid.Empty; // VoidPayment() requires a non-nullable Guid
+				//	if (!methodKey.Equals(Guid.Empty))
+				//	{
+				//		//payment.VoidPayment(invoice, methodKey);
+				//	}
+				//}
+				//catch (Exception ex)
+				//{
+				//	LogHelper.Error(typeof(PayTraceRedirectController), ex.Message, ex);
+				//}
+
 				try
 				{
 					if (invoice != null && Merchello.Core.StringExtensions.IsNullOrWhiteSpace(CustomerContext.GetValue("invoiceKey")))
@@ -288,11 +288,11 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 
 				// The Processed handler triggers each time a response is received from the payment provider, regardless of if a capture payment is attempted or not
 				Processed.RaiseEvent(new PaymentAttemptEventArgs<PayTraceRedirectSilentResponse>(r), this);
-								
+
 				// Record all PayTrace response values regardless of payment success/failure
-				var invoice = GetInvoiceByOrderId(r.OrderId); 
-				
-				if(invoice == null)
+				var invoice = GetInvoiceByKey(r.InvoiceKey); //GetInvoiceByKey(r.OrderId); 
+
+				if (invoice == null)
 				{
 					LogHelper.Warn(typeof(PayTraceRedirectController), "Could not find matching invoice for PayTrace Silent Response " + r.OrderId + ". Attempt to capture payment skipped.");					
 					return;
@@ -340,7 +340,7 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 
 				payment.SavePayTraceTransactionRecord(record); // Save data changes to ExtendedData regardless of payment success/failure
 				
-				if (r.Success)
+				if (r.Success) 
 				{
 					// We can now capture the payment													
 					var captureAttempt = invoice.CapturePayment(payment, _paymentMethod, invoice.Total);
@@ -384,15 +384,31 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			}
 		}
 
-		private IInvoice GetInvoiceByOrderId(string id)
+		private IInvoice GetInvoiceByKey(Guid key)
 		{
-			if (id == null || id.Length == 0) return null;
+			if (key.Equals(Guid.Empty))
+			{
+				return null;
+			}
+			IInvoice invoice = InvoiceService.GetByKey(key);
 
+			//if (id == null || id.Length == 0) return null;
 			// Retrieve subset of Invoices within the past 48 hours to limit the cost of this db call. If a matching invoice isn't found, then search within all invoices
 			//IInvoice invoice = InvoiceService.GetInvoicesByDateRange((DateTime)SqlDateTime.MinValue, (DateTime)SqlDateTime.MaxValue).OrderBy(x => x.InvoiceNumber).FirstOrDefault(x => x.PoNumber == id);			
-			IInvoice invoice = InvoiceService.GetInvoicesByDateRange(DateTime.Now.Subtract(new TimeSpan(2,0,0)), DateTime.Now.Add(new TimeSpan(1,0,0))).OrderBy(x => x.InvoiceNumber).FirstOrDefault(x => x.PoNumber == id);
+			//IInvoice invoice = InvoiceService.GetInvoicesByDateRange(DateTime.Now.Subtract(new TimeSpan(2,0,0)), DateTime.Now.Add(new TimeSpan(1,0,0))).OrderBy(x => x.InvoiceNumber).FirstOrDefault(x => x.PoNumber == id);
 
 			return invoice;
+		}
+		private IInvoice GetInvoiceByKey(string key)
+		{
+			Guid g = Guid.Empty;
+			if(Guid.TryParse(key, out g))
+			{
+				return GetInvoiceByKey(g);
+			} else
+			{
+				return null;
+			}
 		}
 
 		private bool ResetAllCheckoutData()
