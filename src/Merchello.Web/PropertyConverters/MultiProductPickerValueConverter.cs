@@ -74,7 +74,7 @@
             }
             catch (Exception ex)
             {
-                MultiLogHelper.Error<MultiProductPickerValueConverter>("Failed to Convert ProductDisplay property", ex);
+                //MultiLogHelper.Error<MultiProductPickerValueConverter>("Failed to Convert ProductDisplay property", ex); // S6 remove so logs are constantly filled with this until we can update to newer eComm version or patch the issue in-house
                 return null;
             }
         }
