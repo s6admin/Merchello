@@ -276,6 +276,17 @@
                 {
                     get { return new Guid("A4AD4331-C278-4231-8607-925E0839A6CD"); }
                 }
+
+				/// <summary>
+				/// S6 Gets or sets the ava tax provider key.
+				/// </summary>
+				/// <value>
+				/// The ava tax provider key.
+				/// </value>
+				public static Guid AvaTaxProviderKey
+				{
+					get { return new Guid("AVA86CAD-69A8-4C28-89C5-B2ED47001271"); }
+				}
             }
 
             /// <summary>
