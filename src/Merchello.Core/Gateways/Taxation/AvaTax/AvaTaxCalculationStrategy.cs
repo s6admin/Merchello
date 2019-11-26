@@ -37,7 +37,7 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 					baseTaxRate = AdjustedRate(baseTaxRate, _taxMethod.Provinces.FirstOrDefault(x => x.Code == TaxAddress.Region), extendedData);
 				}
 
-				// S6 Visitor applied to each line item. AvaTax response is for the entire basket so we may need to distribute the result to each line Item
+				// S6 Visitor applies to each line item. AvaTax response is for the entire basket so we may need to distribute the result to each line Item
 				var visitor = new TaxableLineItemVisitor(baseTaxRate / 100);
 
 				Invoice.Items.Accept(visitor);

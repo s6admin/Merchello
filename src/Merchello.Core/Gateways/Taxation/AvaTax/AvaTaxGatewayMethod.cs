@@ -1,12 +1,4 @@
 ﻿using Merchello.Core.Gateways.Taxation.FixedRate;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using System.Globalization;
-using System.Linq;
-
 using Merchello.Core.Configuration;
 using Merchello.Core.Models;
 
@@ -29,11 +21,19 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			:base(taxMethod)
 		{}
 
+		/// <summary>
+		/// Calculates the tax amount for an invoice
+		/// </summary>
+		/// <param name="invoice">The <see cref="IInvoice" /></param>
+		/// <param name="taxAddress">The <see cref="IAddress" /> to base taxation rates.  Either origin or destination address.</param>
+		/// <returns>
+		///   <see cref="ITaxCalculationResult" />
+		/// </returns>
 		public override ITaxCalculationResult CalculateTaxForInvoice(IInvoice invoice, IAddress taxAddress)
 		{
 			var ctrValues = new object[] { invoice, taxAddress, TaxMethod };
 
-			var typeName = MerchelloConfiguration.Current.GetStrategyElement(Constants.StrategyTypeAlias.DefaultInvoiceTaxRateQuote).Type;
+			var typeName = MerchelloConfiguration.Current.GetStrategyElement(Core.Constants.StrategyTypeAlias.DefaultInvoiceTaxRateQuote).Type;
 
 			var attempt = ActivatorHelper.CreateInstance<TaxCalculationStrategyBase>(typeName, ctrValues);
 
@@ -46,6 +46,11 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			return CalculateTaxForInvoice(attempt.Result);
 		}
 
+		/// <summary>
+		/// Calculates the tax for product.
+		/// </summary>
+		/// <param name="product">The product.</param>
+		/// <returns></returns>
 		public virtual IProductTaxCalculationResult CalculateTaxForProduct(IProductVariantDataModifierData product)
 		{
 			decimal baseTaxRate = TaxMethod.PercentageTaxRate; // TODO
