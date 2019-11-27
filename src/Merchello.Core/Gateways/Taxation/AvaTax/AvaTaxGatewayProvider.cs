@@ -18,7 +18,7 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 	/// </summary>
 	/// <seealso cref="Merchello.Core.Gateways.Taxation.TaxationGatewayProviderBase" />
 	/// <seealso cref="Merchello.Core.Gateways.Taxation.AvaTax.IAvaTaxGatewayProvider" />
-	[GatewayProviderActivation("AVA86CAD-69A8-4C28-89C5-B2ED47001271", "AvaTax Provider", "AvaTax Provider")]
+	[GatewayProviderActivation("ab977f46-0121-49f9-b7d4-15c5e39df14f", "AvaTax Provider", "AvaTax Provider")]
 	public class AvaTaxGatewayProvider : TaxationGatewayProviderBase, IAvaTaxGatewayProvider
 	{
 		/// <summary>

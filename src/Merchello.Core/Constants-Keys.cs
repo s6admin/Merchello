@@ -285,7 +285,7 @@
 				/// </value>
 				public static Guid AvaTaxProviderKey
 				{
-					get { return new Guid("AVA86CAD-69A8-4C28-89C5-B2ED47001271"); }
+					get { return new Guid("ab977f46-0121-49f9-b7d4-15c5e39df14f"); }
 				}
             }
 
