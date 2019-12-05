@@ -47,7 +47,7 @@
         public override Attempt<ITaxCalculationResult> CalculateTaxesForInvoice()
         {
             var extendedData = new ExtendedDataCollection();
-
+			
             try
             {                
                 var baseTaxRate = _taxMethod.PercentageTaxRate;
@@ -77,18 +77,24 @@
             }                                   
         }
 
-        /// <summary>
-        /// Adjusts the rate of the quote based on the province 
-        /// </summary>
-        /// <param name="baseRate">The base (unadjusted) rate</param>
-        /// <param name="province">The <see cref="ITaxProvince"/> associated with the <see cref="ITaxMethod"/></param>
-        /// <param name="extendedData">The <see cref="ExtendedDataCollection"/></param>
-        /// <returns>The tax adjustment</returns>
-        private static decimal AdjustedRate(decimal baseRate, ITaxProvince province, ExtendedDataCollection extendedData)
+		// S6 FixedRate Provider does not require authentication
+		public override Attempt<ITaxCalculationResult> CalculateTaxesForInvoice(string user, string pswd)
+		{
+			return CalculateTaxesForInvoice();
+		}
+
+		/// <summary>
+		/// Adjusts the rate of the quote based on the province 
+		/// </summary>
+		/// <param name="baseRate">The base (unadjusted) rate</param>
+		/// <param name="province">The <see cref="ITaxProvince"/> associated with the <see cref="ITaxMethod"/></param>
+		/// <param name="extendedData">The <see cref="ExtendedDataCollection"/></param>
+		/// <returns>The tax adjustment</returns>
+		private static decimal AdjustedRate(decimal baseRate, ITaxProvince province, ExtendedDataCollection extendedData)
         {
             if (province == null) return baseRate;
             extendedData.SetValue(Core.Constants.ExtendedDataKeys.ProviceTaxRate, province.PercentAdjustment.ToString(CultureInfo.InvariantCulture));
             return province.PercentAdjustment + baseRate;
-        }
-    }
+        }		
+	}
 }

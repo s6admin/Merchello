@@ -48,6 +48,8 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			  ? GatewayProviderService.CreateTaxMethodWithKey(GatewayProviderSettings.Key, countryCode, taxPercentageRate)
 			  : Attempt<ITaxMethod>.Fail(new ConstraintException("AvaTax method has already been defined for " + countryCode));
 
+			// S6 Get
+			//GatewayProviderSettings.ExtendedData.SetValue("avaUser")
 
 			if (attempt.Success)
 			{

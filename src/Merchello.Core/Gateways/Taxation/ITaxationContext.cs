@@ -22,6 +22,10 @@
         /// </summary>
         ITaxationByProductMethod ProductPricingTaxMethod { get; }
 
+		string TaxationProviderUsername { get; set; }
+
+		string TaxationProviderPassword { get; set; }
+
         /// <summary>
         /// Calculates taxes for the <see cref="IInvoice"/>
         /// </summary>
@@ -52,16 +56,18 @@
         /// </returns>
         ITaxCalculationResult CalculateTaxesForInvoice(IInvoice invoice, IAddress taxAddress, bool quoteOnly = false);
 
-        /// <summary>
-        /// The calculate taxes for a product.
-        /// </summary>
-        /// <param name="product">
-        /// The product.
-        /// </param>
-        /// <returns>
-        /// The <see cref="ITaxCalculationResult"/>.
-        /// </returns>
-        IProductTaxCalculationResult CalculateTaxesForProduct(IProductVariantDataModifierData product);
+		ITaxCalculationResult CalculateTaxesForInvoice(IInvoice invoice, string user, string pswd, bool quoteOnly = false);
+
+		/// <summary>
+		/// The calculate taxes for a product.
+		/// </summary>
+		/// <param name="product">
+		/// The product.
+		/// </param>
+		/// <returns>
+		/// The <see cref="ITaxCalculationResult"/>.
+		/// </returns>
+		IProductTaxCalculationResult CalculateTaxesForProduct(IProductVariantDataModifierData product);
 
         /// <summary>
         /// Gets the tax method for a given tax address

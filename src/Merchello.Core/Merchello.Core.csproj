@@ -389,6 +389,7 @@
     <Compile Include="Gateways\Taxation\AvaTax\AvaTaxGatewayMethod.cs" />
     <Compile Include="Gateways\Taxation\AvaTax\AvaTaxLineItemVisitor.cs" />
     <Compile Include="Gateways\Taxation\AvaTax\Constants\AvaTaxConstants.cs" />
+    <Compile Include="Gateways\Taxation\AvaTax\Controllers\AvaTaxController.cs" />
     <Compile Include="Gateways\Taxation\AvaTax\IAvaTaxGatewayMethod.cs" />
     <Compile Include="Gateways\Taxation\AvaTax\IAvaTaxGatewayProvider.cs" />
     <Compile Include="Logging\IRemoteLogger.cs" />

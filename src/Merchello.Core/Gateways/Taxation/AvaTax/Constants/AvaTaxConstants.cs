@@ -6,13 +6,37 @@ using System.Threading.Tasks;
 
 namespace Merchello.Core.Gateways.Taxation.AvaTax.Constants
 {
+	/// <summary>
+	/// AvaTax Constants
+	/// </summary>
 	public static class AvaTaxConstants
 	{
+		// TODO These need to be pulled from the website project, not eComm
 		public static readonly string COMPANY_CODE = ""; //ConfigurationManager.AppSettings["avaTaxCompanyCode"].ToString();
 		public static readonly string COMPANY_ID = ""; //ConfigurationManager.AppSettings["avaTaxCompanyId"].ToString();
 		public static readonly string ACCOUNT_ID = ""; //ConfigurationManager.AppSettings["avaTaxAccountId"].ToString();
-		public static readonly string USERNAME = ""; //ConfigurationManager.AppSettings["avaTaxUser"].ToString();
-		public static readonly string PASSWORD = ""; //ConfigurationManager.AppSettings["avaTaxPassword"].ToString();
+		//public static readonly string USERNAME = "cbell@sidesixmedia.com"; //ConfigurationManager.AppSettings["avaTaxUser"].ToString();
+		//public static readonly string PASSWORD = "tAxymcTaxfa3E$"; //ConfigurationManager.AppSettings["avaTaxPassword"].ToString();
+
+		/// <summary>
+		/// Dictionary Key for retrieving an AvaTax Item Code stored in an ExtendedData collection
+		/// </summary>
+		public static readonly string ITEM_CODE_KEY = "AVA_ITEM_CODE";
+
+		/// <summary>
+		/// Dictionary Key for retrieving an AvaTax Sales Order Transaction Model stored in an ExtendedData collection
+		/// </summary>
+		public static readonly string SALES_ORDER_KEY = "AVA_SALES_ORDER";
+
+		/// <summary>
+		/// Dictionary key for retrieving an AvaTax Sales Order TransactionLineModel stored in an eComm Invoice LineItem ExtendedData collection
+		/// </summary>
+		public static readonly string TRANSACTION_LINE = "AVA_TRANSACTION_LINE";
+
+		/// <summary>
+		/// A dictionary key indicating that the related ITaxCalculationResult still needs to be processed by the external AvaTax provider.
+		/// </summary>
+		public static readonly string AWAITING_AVATAX_KEY = "AWAITING_AVATAX";
 
 		public static readonly string DEFAULT_TAX_CODE = "P0000000";
 

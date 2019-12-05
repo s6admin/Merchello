@@ -1,17 +1,18 @@
 ﻿namespace Merchello.Core.Gateways.Taxation.FixedRate
 {
-    using System.Globalization;
-    using System.Linq;
+	using System;
+	using System.Globalization;
+	using System.Linq;
 
-    using Merchello.Core.Configuration;
-    using Merchello.Core.Models;
+	using Merchello.Core.Configuration;
+	using Merchello.Core.Models;
 
-    using Umbraco.Core.Logging;
+	using Umbraco.Core.Logging;
 
-    /// <summary>
-    /// The fix rate taxation gateway method.
-    /// </summary>
-    public class FixRateTaxationGatewayMethod : TaxationGatewayMethodBase, IFixedRateTaxationGatewayMethod
+	/// <summary>
+	/// The fix rate taxation gateway method.
+	/// </summary>
+	public class FixRateTaxationGatewayMethod : TaxationGatewayMethodBase, IFixedRateTaxationGatewayMethod
     {
         /// <summary>
         /// Initializes a new instance of the <see cref="FixRateTaxationGatewayMethod"/> class.
@@ -53,17 +54,23 @@
             return CalculateTaxForInvoice(attempt.Result);
         }
 
+		// S6 FixedRate Tax provider does not use authentication, but method signature is required 
+		public override ITaxCalculationResult CalculateTaxForInvoice(IInvoice invoice, IAddress taxAddress, string user, string pswd)
+		{
+			return CalculateTaxForInvoice(invoice, taxAddress);
+		}
 
-        /// <summary>
-        /// Calculates taxes for a product.
-        /// </summary>
-        /// <param name="product">
-        /// The <see cref="IProductVariantDataModifierData"/>.
-        /// </param>
-        /// <returns>
-        /// The <see cref="ITaxCalculationResult"/>.
-        /// </returns>
-        public virtual IProductTaxCalculationResult CalculateTaxForProduct(IProductVariantDataModifierData product)
+
+		/// <summary>
+		/// Calculates taxes for a product.
+		/// </summary>
+		/// <param name="product">
+		/// The <see cref="IProductVariantDataModifierData"/>.
+		/// </param>
+		/// <returns>
+		/// The <see cref="ITaxCalculationResult"/>.
+		/// </returns>
+		public virtual IProductTaxCalculationResult CalculateTaxForProduct(IProductVariantDataModifierData product)
         {            
             var baseTaxRate = TaxMethod.PercentageTaxRate;
 
