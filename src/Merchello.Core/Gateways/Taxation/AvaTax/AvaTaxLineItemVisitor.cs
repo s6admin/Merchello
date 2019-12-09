@@ -51,9 +51,12 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 		/// </param>
 		public void Visit(ILineItem lineItem)
 		{
+			// NOTE: Visitor must work without ANY invoice or lineItem keys, because none are generated during invoice preparation, only after an official invoice has been SAVED
+			
 			// If lineItem isn't marked taxable, skip it, otherwise continue below
 			if (!lineItem.ExtendedData.GetTaxableValue()) return;
 						
+			// TODO PROBLEM: Without lineItem keys invoices with multiple lineItems of the same product won't be distinguishable from each other
 			string avaItemCode = string.Empty;
 			if(lineItem.ExtendedData != null && lineItem.ExtendedData.ContainsKey(AvaTaxConstants.ITEM_CODE_KEY)) 
 			{
@@ -94,7 +97,7 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			{
 				//avaLine.tax // Applies 3rd party overrides, may differ from taxCalculated
 				//avaLine.taxCalculated // Does not apply any 3rd party overrides outside of AvaTax. This is the value that should be used for v1.0
-				decimal tax = avaLine.taxCalculated ?? 0;
+				decimal lineTax = avaLine.taxCalculated ?? 0;
 				if (avaLine.taxCalculated == null)
 				{
 					// TODO Don't assume NULL taxCalculated should remain as 0
@@ -103,33 +106,28 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 
 					return;
 				}
-				 
-				lineItem.ExtendedData.SetValue(Core.Constants.ExtendedDataKeys.LineItemTaxAmount, tax.ToString(CultureInfo.InvariantCulture));
+				
+				// Set specific ED value eComm expects for LineItemTaxAmount 
+				lineItem.ExtendedData.SetValue(Core.Constants.ExtendedDataKeys.LineItemTaxAmount, lineTax.ToString(CultureInfo.InvariantCulture));
+
+				// Save entire avaLine data to ED collection if needed for later reference(s)
 				lineItem.ExtendedData.SetValue(AvaTaxConstants.TRANSACTION_LINE, JsonConvert.SerializeObject(avaLine)); // TODO Confirm serialization succeeds with full test data
-				if(avaLine.details != null && avaLine.details.Count == 1)
+
+				/* Some available properties that may be helpful
+					avaLine.details[#].rate -- one details object per tax authority
+					avaLine.tax
+					avaLine.taxableAmount
+					avaLine.taxCode
+					avaLine.taxCodeId
+					avaLine.taxEngine
+				*/
+				// TODO There are going to be MULTIPLE objects in the detail collection...how should a baseTaxRate be determined?
+				if (avaLine.details != null && avaLine.details.Count == 1)
 				{
 					lineItem.ExtendedData.SetValue(Core.Constants.ExtendedDataKeys.BaseTaxRate, avaLine.details.First().rate.ToString());
-				}
-				//lineItem.ExtendedData.SetValue(Core.Constants.ExtendedDataKeys.LineItemTaxAmount, (lineItem.TotalPrice * this._taxRate).ToString(CultureInfo.InvariantCulture));
+				}				
 			}
-
-			#region BaseTaxRate TODO
-
-			// S6 TODO Does BaseTaxRate require unique treatment for Discounts vs. regular lineItems?
-			// S6 TODO BaseTaxRate can have multiple values from AvaTax depending on how many objects are returned in the avaLine.details collection. Determine if/how these should be mapped to BaseTaxRate or if that value can be excluded from the AvaTax provider entirely since it originated from the FixedRate provider and may not be necessary.
-			/* Some available properties that may be helpful
-				avaLine.details[#].rate -- one details object per tax authority
-				avaLine.tax
-				avaLine.taxableAmount
-				avaLine.taxCode
-				avaLine.taxCodeId
-				avaLine.taxEngine
-			*/
-
-			//lineItem.ExtendedData.SetValue(Core.Constants.ExtendedDataKeys.BaseTaxRate, this._taxRate.ToString());
-
-			#endregion BaseTaxRate TODO
-
+			
 			_lineItems.Add(lineItem);
 		}
 

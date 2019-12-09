@@ -55,9 +55,7 @@
         /// The <see cref="ITaxCalculationResult"/>
         /// </returns>
         ITaxCalculationResult CalculateTaxesForInvoice(IInvoice invoice, IAddress taxAddress, bool quoteOnly = false);
-
-		ITaxCalculationResult CalculateTaxesForInvoice(IInvoice invoice, string user, string pswd, bool quoteOnly = false);
-
+		
 		/// <summary>
 		/// The calculate taxes for a product.
 		/// </summary>

@@ -66,18 +66,19 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			// S6 TODO This is a custom ED collection...where is it ultimately stored? Or is it temporary and then disposed? Invoices don't have ED collections, but their lineItems do
 			var extendedData = new ExtendedDataCollection();
 			
-			//if (Invoice.Key.Equals(Guid.Empty))
-			//{
+			if (Invoice.Key.Equals(Guid.Empty))
+			{
+				// DEPRECATED TODO Remove if temporary line item keys end up being sufficient
+				// Set a flag indicating the tax result has not yet been processed by the external provider so website project can respond if needed
+				// This becomes the invoice TaxLineItem ED collection
+				extendedData.SetValue(AvaTaxConstants.AWAITING_AVATAX_KEY, bool.TrueString);
 
-			//	// Set a flag indicating the tax result has not yet been processed by the external provider. 
-			//	// This will be removed once the Invoice has been assigned a Key and the tax has been officially estimated in an AvaTax SalesOrder response
-			//	//extendedData.SetValue(AvaTaxConstants.AWAITING_AVATAX_KEY, bool.TrueString);
-				
-			//	// Success must be sent when the invoice is intially saved otherwise eComm will error
-			//	// TODO Consider passing an empty result if the taxMethod Name and extendedData collection are not required. That will make identifying empty results from valid 0% tax results easier
-			//	return Attempt<ITaxCalculationResult>.Succeed(
-			//		new TaxCalculationResult(0,0)); //new TaxCalculationResult(_taxMethod.Name, 0, 0, extendedData)
-			//}  	
+				//	// Success must be sent when the invoice is intially saved otherwise eComm will error
+				//	// TODO Consider passing an empty result if the taxMethod Name and extendedData collection are not required. That will make identifying empty results from valid 0% tax results easier
+				//return Attempt<ITaxCalculationResult>.Succeed(
+			    //	new TaxCalculationResult(_taxMethod.Name, 0, 0, extendedData)); // new TaxCalculationResult(0,0)); 
+
+			}  	
 					
 			if (AvaTaxApiHelper.Init(user, pswd))
 			{
@@ -90,10 +91,7 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 					}
 
 					TransactionModel tm = AvaTaxApiHelper.CreateSalesOrderTransaction(Invoice, c);
-					
-					//Chains.InvoiceCreation.CheckoutManager
-					//Invoice.PrepareOrder() // Order is not an invoice					
-
+										
 					if (tm == null)
 					{
 						Exception ex = new Exception("NULL Transaction Model returned for Invoice " + Invoice.Key.ToString());
@@ -103,19 +101,25 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 					}
 
 					// Fire SalesOrder Success event so front-end can handle any custom tasks						
-					OnSalesOrderSuccess.RaiseEvent(new ObjectEventArgs<TransactionModel>(tm), this); 
+					OnSalesOrderSuccess.RaiseEvent(new ObjectEventArgs<TransactionModel>(tm), this);
 
 					// S6 TODO Is baseTaxRate required by ALL Tax providers or just FixedRate, which is being phased out?
-					var baseTaxRate = _taxMethod.PercentageTaxRate;
+					// Rate is returned from AvaTax in the summary collection and can have multiple values. Determine how to represent this (if necessary) within the ED collection
+					var baseTaxRate = 0; // tm.summary.First().rate ?? 0;
 					extendedData.SetValue(Core.Constants.ExtendedDataKeys.BaseTaxRate, baseTaxRate.ToString(CultureInfo.InvariantCulture));
-
-					extendedData.SetValue(AvaTaxConstants.SALES_ORDER_KEY, tm);
+										
+					extendedData.SetValue(AvaTaxConstants.SALES_ORDER_KEY, tm); // TODO Track where this ED collection ultimately ends up
 						
 					var visitor = new AvaTaxLineItemVisitor(tm);
 
 					decimal totalTax = tm.totalTax ?? 0;
 
-					// TODO Error if totalTax is NULL or default to 0
+					// Flag if totalTax is NULL, it may need to be treated differently than 0, currently permitted to continue processing
+					if (tm.totalTax == null) {
+						
+						Exception ex = new Exception("totalTax is NULL for transaction " + tm.id + " (" + tm.email + ") ");
+						LogHelper.Error(typeof(AvaTaxCalculationStrategy), "Warning: AvaTax transaction returned with NULL totalTax. ", ex);
+					}				
 												
 					return Attempt<ITaxCalculationResult>.Succeed(
 						new TaxCalculationResult(_taxMethod.Name, baseTaxRate, totalTax, extendedData));

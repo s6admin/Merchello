@@ -53,14 +53,7 @@
 
             return CalculateTaxForInvoice(attempt.Result);
         }
-
-		// S6 FixedRate Tax provider does not use authentication, but method signature is required 
-		public override ITaxCalculationResult CalculateTaxForInvoice(IInvoice invoice, IAddress taxAddress, string user, string pswd)
-		{
-			return CalculateTaxForInvoice(invoice, taxAddress);
-		}
-
-
+		
 		/// <summary>
 		/// Calculates taxes for a product.
 		/// </summary>

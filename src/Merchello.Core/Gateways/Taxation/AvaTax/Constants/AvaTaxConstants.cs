@@ -15,9 +15,7 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax.Constants
 		public static readonly string COMPANY_CODE = ""; //ConfigurationManager.AppSettings["avaTaxCompanyCode"].ToString();
 		public static readonly string COMPANY_ID = ""; //ConfigurationManager.AppSettings["avaTaxCompanyId"].ToString();
 		public static readonly string ACCOUNT_ID = ""; //ConfigurationManager.AppSettings["avaTaxAccountId"].ToString();
-		//public static readonly string USERNAME = "cbell@sidesixmedia.com"; //ConfigurationManager.AppSettings["avaTaxUser"].ToString();
-		//public static readonly string PASSWORD = "tAxymcTaxfa3E$"; //ConfigurationManager.AppSettings["avaTaxPassword"].ToString();
-
+		
 		/// <summary>
 		/// Dictionary Key for retrieving an AvaTax Item Code stored in an ExtendedData collection
 		/// </summary>

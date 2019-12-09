@@ -57,17 +57,7 @@
         /// <param name="taxAddress">The <see cref="IAddress"/> to base taxation rates.  Either origin or destination address.</param>
         /// <returns><see cref="ITaxCalculationResult"/></returns>
         public abstract ITaxCalculationResult CalculateTaxForInvoice(IInvoice invoice, IAddress taxAddress);
-
-		/// <summary>
-		/// S6 Custom abstract method for calculating invoice taxes using a third party service which requires authentication.
-		/// </summary>
-		/// <param name="invoice">The invoice.</param>
-		/// <param name="taxAddress">The tax address.</param>
-		/// <param name="user">The user.</param>
-		/// <param name="pswd">The PSWD.</param>
-		/// <returns></returns>
-		public abstract ITaxCalculationResult CalculateTaxForInvoice(IInvoice invoice, IAddress taxAddress, string user, string pswd);
-
+				
         /// <summary>
         /// Calculates the tax amount for an invoice
         /// </summary>
@@ -81,14 +71,6 @@
 
             return attempt.Result;
         }
-
-		public virtual ITaxCalculationResult CalculateTaxForInvoice(ITaxCalculationStrategy strategy, string user, string pswd)
-		{
-			var attempt = strategy.CalculateTaxesForInvoice(user, pswd);
-
-			if (!attempt.Success) throw attempt.Exception;
-
-			return attempt.Result;
-		}
+		
     }
 }

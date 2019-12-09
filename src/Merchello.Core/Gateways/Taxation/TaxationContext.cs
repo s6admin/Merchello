@@ -197,47 +197,7 @@
             var gatewayTaxMethod = provider.GetGatewayTaxMethodByCountryCode(taxAddress.CountryCode);
 
             return gatewayTaxMethod.CalculateTaxForInvoice(invoice, taxAddress);
-        }
-
-		/// <summary>
-		/// S6 Custom method for calculating invoice taxes using a third party service which requires authentication.
-		/// </summary>
-		/// <param name="invoice">The invoice.</param>
-		/// <param name="taxAddress">The tax address.</param>
-		/// <param name="quoteOnly">if set to <c>true</c> [quote only].</param>
-		/// <param name="user">The user.</param>
-		/// <param name="pswd">The PSWD.</param>
-		/// <returns></returns>
-		public ITaxCalculationResult CalculateTaxesForInvoice(IInvoice invoice, string user, string pswd, bool quoteOnly = false)
-		{
-			var taxAddress = invoice.GetBillingAddress();
-
-			if (string.IsNullOrWhiteSpace(user))
-			{
-				Exception ex = new Exception("Missing username during tax calculation request for invoice " + invoice.Key.ToString());
-				LogHelper.Error(typeof(TaxationContext), "This tax provider requires validation. Could not attempt tax calculation for invoice. ", ex);
-				return null;
-			}
-
-			if (string.IsNullOrWhiteSpace(pswd))
-			{
-				Exception ex = new Exception("Missing password during tax calculation request for invoice " + invoice.Key.ToString());
-				LogHelper.Error(typeof(TaxationContext), "This tax provider requires validation. Could not attempt tax calculation for invoice. ", ex);
-				return null;
-			}
-
-			var providersKey =
-				GatewayProviderService.GetTaxMethodsByCountryCode(taxAddress.CountryCode)
-									  .Select(x => x.ProviderKey).FirstOrDefault();
-
-			if (Guid.Empty.Equals(providersKey)) return new TaxCalculationResult(0, 0);
-
-			var provider = GatewayProviderResolver.GetProviderByKey<TaxationGatewayProviderBase>(providersKey);
-
-			var gatewayTaxMethod = provider.GetGatewayTaxMethodByCountryCode(taxAddress.CountryCode);
-
-			return gatewayTaxMethod.CalculateTaxForInvoice(invoice, taxAddress, user, pswd);
-		}
+        }		
 
         /// <summary>
         /// Calculates taxes based on a product.

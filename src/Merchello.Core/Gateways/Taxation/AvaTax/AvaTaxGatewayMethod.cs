@@ -45,41 +45,9 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 				throw attempt.Exception;
 			}
 
-			return CalculateTaxForInvoice(attempt.Result);
-
-			// TODO Temp...if no credentials are passed, return empty tax result so front-end has a chance to call the tax provider after invoice is initially saved			
-			//return new TaxCalculationResult(0, 0);
-
-			//Exception ex = new Exception("This Tax Provider requires authentication.");
-			//throw ex;
+			return CalculateTaxForInvoice(attempt.Result);			
 		}
-
-		/// <summary>
-		/// S6 Custom method for calculating invoice tax that requires third party authentication
-		/// </summary>
-		/// <param name="invoice">The <see cref="IInvoice" /></param>
-		/// <param name="taxAddress">The <see cref="IAddress" /> to base taxation rates.  Either origin or destination address.</param>
-		/// <returns>
-		///   <see cref="ITaxCalculationResult" />
-		/// </returns>
-		public override ITaxCalculationResult CalculateTaxForInvoice(IInvoice invoice, IAddress taxAddress, string user, string pswd)
-		{
-			
-			var ctrValues = new object[] { invoice, taxAddress, TaxMethod };
-
-			var typeName = MerchelloConfiguration.Current.GetStrategyElement(Core.Constants.StrategyTypeAlias.DefaultInvoiceTaxRateQuote).Type;
-
-			var attempt = ActivatorHelper.CreateInstance<TaxCalculationStrategyBase>(typeName, ctrValues);
-
-			if (!attempt.Success)
-			{
-				LogHelper.Error<AvaTaxGatewayProvider>("Failed to instantiate the tax calculation strategy '" + typeName + "'", attempt.Exception);
-				throw attempt.Exception;
-			}
-
-			return CalculateTaxForInvoice(attempt.Result);
-		}
-
+		
 		/// <summary>
 		/// Calculates the tax for product.
 		/// </summary>

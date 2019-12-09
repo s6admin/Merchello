@@ -61,6 +61,6 @@
 		/// <param name="user">The user.</param>
 		/// <param name="pswd">The PSWD.</param>
 		/// <returns></returns>
-		ITaxCalculationResult CalculateTaxForInvoice(IInvoice invoice, IAddress taxAddress, string user, string pswd);
+		//ITaxCalculationResult CalculateTaxForInvoice(IInvoice invoice, IAddress taxAddress, string user, string pswd);
 	}
 }
