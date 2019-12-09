@@ -13,14 +13,14 @@
         /// Computes the invoice tax result
         /// </summary>
         /// <returns>The <see cref="ITaxCalculationResult"/></returns>
-        Attempt<ITaxCalculationResult> CalculateTaxesForInvoice();
-
+        Attempt<ITaxCalculationResult> CalculateTaxesForInvoice(bool quoteOnly = false);
+		
 		/// <summary>
-		/// Calculates the taxes for invoice using third party service requiring authentication.
+		/// S6 Calculates the taxes for invoice using third party service requiring authentication.
 		/// </summary>
 		/// <param name="user">The user.</param>
 		/// <param name="pswd">The PSWD.</param>
 		/// <returns></returns>
-		Attempt<ITaxCalculationResult> CalculateTaxesForInvoice(string user, string pswd);
+		Attempt<ITaxCalculationResult> CalculateTaxesForInvoice(string user, string pswd, bool quoteOnly = false);
     }
 }

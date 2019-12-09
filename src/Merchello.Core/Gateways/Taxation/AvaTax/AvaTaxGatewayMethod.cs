@@ -27,10 +27,11 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 		/// </summary>
 		/// <param name="invoice">The <see cref="IInvoice" /></param>
 		/// <param name="taxAddress">The <see cref="IAddress" /> to base taxation rates.  Either origin or destination address.</param>
+		/// <param name="quoteOnly">Indicates if the tax calculations are an estimate (true) or final (false). AvaTax provider default is set to true so all calculations are considered SalesOrder estimates instead of final SalesInvoice records.</param>
 		/// <returns>
 		///   <see cref="ITaxCalculationResult" />
 		/// </returns>
-		public override ITaxCalculationResult CalculateTaxForInvoice(IInvoice invoice, IAddress taxAddress)
+		public override ITaxCalculationResult CalculateTaxForInvoice(IInvoice invoice, IAddress taxAddress, bool quoteOnly = true)
 		{
 
 			var ctrValues = new object[] { invoice, taxAddress, TaxMethod };
@@ -45,7 +46,7 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 				throw attempt.Exception;
 			}
 
-			return CalculateTaxForInvoice(attempt.Result);			
+			return CalculateTaxForInvoice(attempt.Result, quoteOnly);			
 		}
 		
 		/// <summary>
@@ -77,5 +78,6 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 
 			#endregion Example from FlatRate provider
 		}
+		
 	}
 }

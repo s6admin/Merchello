@@ -55,17 +55,19 @@
         /// </summary>
         /// <param name="invoice">The <see cref="IInvoice"/></param>
         /// <param name="taxAddress">The <see cref="IAddress"/> to base taxation rates.  Either origin or destination address.</param>
+		/// <param name="quoteOnly">S6 Indicates if the tax calculations are an estimate (true) or final (false).</param>
         /// <returns><see cref="ITaxCalculationResult"/></returns>
-        public abstract ITaxCalculationResult CalculateTaxForInvoice(IInvoice invoice, IAddress taxAddress);
-				
-        /// <summary>
-        /// Calculates the tax amount for an invoice
-        /// </summary>
-        /// <param name="strategy">The strategy to use when calculating the tax amount</param>
-        /// <returns><see cref="ITaxCalculationResult"/></returns>
-        public virtual ITaxCalculationResult CalculateTaxForInvoice(ITaxCalculationStrategy strategy)
+        public abstract ITaxCalculationResult CalculateTaxForInvoice(IInvoice invoice, IAddress taxAddress, bool quoteOnly = false);
+
+		/// <summary>
+		/// Calculates the tax amount for an invoice
+		/// </summary>
+		/// <param name="strategy">The strategy to use when calculating the tax amount</param>
+		/// /// <param name="quoteOnly">S6 Indicates if the tax calculations are an estimate (true) or final (false).</param>
+		/// <returns><see cref="ITaxCalculationResult"/></returns>
+		public virtual ITaxCalculationResult CalculateTaxForInvoice(ITaxCalculationStrategy strategy, bool quoteOnly = false)
         {
-            var attempt = strategy.CalculateTaxesForInvoice();
+            var attempt = strategy.CalculateTaxesForInvoice(quoteOnly);
 
             if (!attempt.Success) throw attempt.Exception;
 

@@ -44,7 +44,7 @@
         /// <returns>
         /// The <see cref="ITaxCalculationResult"/>
         /// </returns>
-        public override Attempt<ITaxCalculationResult> CalculateTaxesForInvoice()
+        public override Attempt<ITaxCalculationResult> CalculateTaxesForInvoice(bool quoteOnly = false)
         {
             var extendedData = new ExtendedDataCollection();
 			
@@ -78,7 +78,7 @@
         }
 
 		// S6 FixedRate Provider does not require authentication
-		public override Attempt<ITaxCalculationResult> CalculateTaxesForInvoice(string user, string pswd)
+		public override Attempt<ITaxCalculationResult> CalculateTaxesForInvoice(string user, string pswd, bool quoteOnly = false)
 		{
 			return CalculateTaxesForInvoice();
 		}

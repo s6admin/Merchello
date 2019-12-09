@@ -47,10 +47,17 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			}
 		}
 
-		private static string DetermineCustomerCode(IInvoice i, ICustomerBase customer)
+		private static string DetermineCustomerCode(IInvoice i, ICustomerBase customer = null)
 		{			
 			// CustomerCode currently determined according to registered/anonymous status (invoice Key or email)
 			string customerCode = string.Empty;
+
+			if(customer == null)
+			{
+				// Attempt retrieving customer from invoice
+				customer = i.Customer();
+			}
+
 			if (customer != null && !customer.Key.Equals(Guid.Empty))
 			{
 				customerCode = customer.Key.ToString();
@@ -106,7 +113,7 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			#endregion Addresses
 		}
 
-		private static void SetProducts(TransactionBuilder tb, IInvoice i)
+		private static void SetProducts(TransactionBuilder tb, IInvoice i, bool quoteOnly = true)
 		{
 			#region Products / Line Items
 
@@ -127,10 +134,18 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 							continue;
 						}
 
-						Guid productVariantKey = li.ExtendedData.GetProductVariantKey();
-						// TODO Fallback to parent product key?
+						Guid productVariantKey = li.ExtendedData.GetProductVariantKey(); // TODO Fallback to parent product key?
 
-						tb.WithLine(li.Price, li.Quantity, avaProductTaxCode, "TODO_description", productKey.ToString(), "TODO_customerUsageType", li.Key.ToString());
+						Guid liAvaKey = GetLineItemAvaTaxKey(li, quoteOnly);
+
+						if (liAvaKey.Equals(Guid.Empty))
+						{
+							Exception ex = new Exception("LineItem has no Key. ");
+							LogHelper.Error(typeof(AvaTaxApiHelper), "Could not include lineItem in AvaTax calculation. ", ex);
+							continue;
+						}
+
+						tb.WithLine(li.Price, li.Quantity, avaProductTaxCode, "TODO_description", productKey.ToString(), "TODO_customerUsageType", liAvaKey.ToString());
 					}
 					else
 					{
@@ -142,8 +157,40 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			#endregion Products / Line Items
 		}
 
+		private static Guid GetLineItemAvaTaxKey(ILineItem li, bool quoteOnly = true)
+		{
+			Guid g = Guid.Empty;
+
+			if(li != null)
+			{
+				g = li.Key; // Prioritize native eComm lineItem key
+				
+				// If native eComm lineItem is Empty but request if for a final tax record (SalesInvoice) there is an eComm issue. Allow temp lineItem Key fallback, but log the issue
+				if(g.Equals(Guid.Empty) && !quoteOnly)
+				{
+					Exception ex = new Exception("No LineItem Key found for Product " + li.ExtendedData.GetProductKey() + " during AvaTax SalesInvoice request. Falling back to temporary lineItem Key used for SalesOrder estimate if available. ");
+					LogHelper.Error(typeof(AvaTaxApiHelper), "No LineItem Key found during AvaTax SalesInvoice request. Falling back to temporary lineItem Key used for SalesOrder estimate. ", ex);
+				}
+
+				// If it is empty, and the request is only for a QUOTE (AvaTax SalesOrder) check for custom AvaTax key
+				if (g.Equals(Guid.Empty) &&
+					li.ExtendedData != null && 
+					li.ExtendedData.ContainsKey(AvaTaxConstants.TEMPORARY_TAX_LINE_ITEM_KEY))
+				{
+					if(!Guid.TryParse(li.ExtendedData.GetValue(AvaTaxConstants.TEMPORARY_TAX_LINE_ITEM_KEY).ToString(), out g))
+					{
+						// Native LineItem key is empty AND LineItem has no temporary tax line item key
+						Exception ex = new Exception("Could not determine Key for LineItem with product " + li.ExtendedData.GetProductKey());
+						LogHelper.Error(typeof(AvaTaxApiHelper), "LineItem has no key. ", ex);
+					} 
+				}
+			}
+
+			return g;
+		}
+
 		// TODO Pass Addresses as method params after they have been validated by UPS API
-		public static TransactionModel CreateSalesOrderTransaction(IInvoice i, ICustomerBase customer)
+		public static TransactionModel CreateSalesOrderTransaction(IInvoice i, ICustomerBase customer = null)
 		{
 			#region Ensure all required parameters are available
 			
@@ -207,7 +254,12 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			{
 				try
 				{
+
+					LogHelper.Warn(typeof(AvaTaxApiHelper), "AvaTax SalesOrder attempt for Invoice " + i.Key + " email " + i.BillToEmail);
+
 					tm = tb.Create();
+
+					LogHelper.Warn(typeof(AvaTaxApiHelper), "AvaTax SalesOrder success response " + tm.id + " for Invoice " + i.Key);
 
 					return tm;
 				}
@@ -227,7 +279,7 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			return null;
 		}
 				
-		public static TransactionModel CreateSalesInvoiceTransaction(IInvoice i, ICustomerBase customer)
+		public static TransactionModel CreateSalesInvoiceTransaction(IInvoice i, ICustomerBase customer = null)
 		{
 
 			#region Ensure all required parameters are available
@@ -276,7 +328,11 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			{
 				try
 				{
+					LogHelper.Warn(typeof(AvaTaxApiHelper), "AvaTax SalesInvoice attempt for Invoice " + i.Key + " email " + i.BillToEmail);
+
 					tm = tb.Create();
+
+					LogHelper.Warn(typeof(AvaTaxApiHelper), "AvaTax SalesInvoice success response " + tm.id + " for Invoice " + i.Key);
 
 					return tm;
 				}

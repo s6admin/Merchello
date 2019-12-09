@@ -37,7 +37,7 @@
         /// <returns>
         /// The <see cref="ITaxCalculationResult"/>.
         /// </returns>
-        public override ITaxCalculationResult CalculateTaxForInvoice(IInvoice invoice, IAddress taxAddress)
+        public override ITaxCalculationResult CalculateTaxForInvoice(IInvoice invoice, IAddress taxAddress, bool quoteOnly = false) // S6 Added quoteOnly
         {            
             var ctrValues = new object[] { invoice, taxAddress, TaxMethod };
 

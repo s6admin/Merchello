@@ -22,8 +22,10 @@
         /// </summary>
         ITaxationByProductMethod ProductPricingTaxMethod { get; }
 
+		// S6 Added so TaxContext can provider login username credential for third-party tax provider that requires authentication
 		string TaxationProviderUsername { get; set; }
 
+		// S6 Added so TaxContext can provider login password credential for third-party tax provider that requires authentication
 		string TaxationProviderPassword { get; set; }
 
         /// <summary>

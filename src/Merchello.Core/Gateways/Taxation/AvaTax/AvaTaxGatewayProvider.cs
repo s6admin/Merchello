@@ -112,6 +112,6 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 					.Where(code => TaxMethods.FirstOrDefault(x => x.CountryCode.Equals(code.ServiceCode)) == null);
 
 			return resources;
-		}
+		}		
 	}
 }

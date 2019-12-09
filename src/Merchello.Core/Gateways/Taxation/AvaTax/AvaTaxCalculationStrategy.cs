@@ -31,7 +31,7 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			_taxMethod = taxMethod;
 		}
 
-		public override Attempt<ITaxCalculationResult> CalculateTaxesForInvoice()
+		public override Attempt<ITaxCalculationResult> CalculateTaxesForInvoice(bool quoteOnly = false)
 		{
 			ITaxationContext taxContext = MerchelloContext.Current.Gateways.Taxation;
 
@@ -56,10 +56,10 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			}
 
 			// TODO If this method hits, revert any eComm core classe changes that introduced s6 user/pswd as method parameters 
-			return CalculateTaxesForInvoice(taxContext.TaxationProviderUsername, taxContext.TaxationProviderPassword);	
+			return CalculateTaxesForInvoice(taxContext.TaxationProviderUsername, taxContext.TaxationProviderPassword, quoteOnly);	
 		}
 
-		public override Attempt<ITaxCalculationResult> CalculateTaxesForInvoice(string user, string pswd)
+		public override Attempt<ITaxCalculationResult> CalculateTaxesForInvoice(string user, string pswd, bool quoteOnly = false)
 		{
 			ITaxationContext taxContext = MerchelloContext.Current.Gateways.Taxation;
 			
@@ -90,7 +90,15 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 						//MerchelloContext.Current.Services.CustomerService
 					}
 
-					TransactionModel tm = AvaTaxApiHelper.CreateSalesOrderTransaction(Invoice, c);
+					// Value of quoteOnly determines whether CreateSalesOrder or CreateInvoice is called
+					TransactionModel tm = null;
+					if (quoteOnly)
+					{
+						tm = AvaTaxApiHelper.CreateSalesOrderTransaction(Invoice, c);
+					} else
+					{
+						tm = AvaTaxApiHelper.CreateSalesInvoiceTransaction(Invoice, c);
+					}
 										
 					if (tm == null)
 					{
@@ -167,6 +175,15 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			//	return Attempt<ITaxCalculationResult>.Fail(ex);
 			//}
 		}
+
+		/// <summary>
+		/// Finalizes taxes for the completed invoice via the AvaTax API without marking the SalesInvocie as committed.
+		/// </summary>
+		/// <param name="invoice">The invoice.</param>
+		//public void FinalizeTaxesForCompletedInvoice(IInvoice invoice)
+		//{
+		//	AvaTaxApiHelper.CreateSalesInvoiceTransaction(invoice);
+		//}
 
 		// S6 TODO Finish (copied from FixedRate)
 		private static decimal AdjustedRate(decimal baseRate, ITaxProvince province, ExtendedDataCollection extendedData)

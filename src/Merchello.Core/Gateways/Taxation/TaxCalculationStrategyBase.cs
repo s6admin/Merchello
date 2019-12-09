@@ -28,7 +28,7 @@
         /// <param name="taxAddress">
         /// The tax address.
         /// </param>
-        protected TaxCalculationStrategyBase(IInvoice invoice, IAddress taxAddress)
+        protected TaxCalculationStrategyBase(IInvoice invoice, IAddress taxAddress, bool quoteOnly = false)
         {
             Mandate.ParameterNotNull(invoice, "invoice");
             Mandate.ParameterNotNull(taxAddress, "taxAddress");
@@ -59,7 +59,7 @@
         /// <returns>
         /// The <see cref="ITaxCalculationResult"/>
         /// </returns>
-        public abstract Attempt<ITaxCalculationResult> CalculateTaxesForInvoice();
+        public abstract Attempt<ITaxCalculationResult> CalculateTaxesForInvoice(bool quoteOnly = false);
 
 		/// <summary>
 		/// Calculates the taxes for invoice.
@@ -67,6 +67,6 @@
 		/// <param name="user">The user.</param>
 		/// <param name="pswd">The PSWD.</param>
 		/// <returns></returns>
-		public abstract Attempt<ITaxCalculationResult> CalculateTaxesForInvoice(string user, string pswd);
+		public abstract Attempt<ITaxCalculationResult> CalculateTaxesForInvoice(string user, string pswd, bool quoteOnly = false);
     }
 }

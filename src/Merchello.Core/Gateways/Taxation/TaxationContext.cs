@@ -165,7 +165,7 @@
         /// </remarks>
         public ITaxCalculationResult CalculateTaxesForInvoice(IInvoice invoice, bool quoteOnly = false)
         {
-            return CalculateTaxesForInvoice(invoice, invoice.GetBillingAddress());
+			return CalculateTaxesForInvoice(invoice, invoice.GetBillingAddress(), quoteOnly); // S6 Add quoteOnly
         }
 
         /// <summary>
@@ -195,8 +195,8 @@
             var provider = GatewayProviderResolver.GetProviderByKey<TaxationGatewayProviderBase>(providersKey);
 
             var gatewayTaxMethod = provider.GetGatewayTaxMethodByCountryCode(taxAddress.CountryCode);
-
-            return gatewayTaxMethod.CalculateTaxForInvoice(invoice, taxAddress);
+			
+            return gatewayTaxMethod.CalculateTaxForInvoice(invoice, taxAddress, quoteOnly);
         }		
 
         /// <summary>
@@ -330,5 +330,10 @@
             _taxMethodNotQueried = true;
             TaxApplicationInitialized = true;
         }
+
+		public void FinalizeTaxes(IInvoice invoice)
+		{
+
+		}
     }
 }

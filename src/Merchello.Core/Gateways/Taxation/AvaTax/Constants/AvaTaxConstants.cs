@@ -38,6 +38,11 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax.Constants
 
 		public static readonly string DEFAULT_TAX_CODE = "P0000000";
 
+		/// <summary>
+		/// A dictionary key referencing a temporary tax line item key that AvaTax must use when generating SalesOrder estimates.
+		/// </summary>
+		public static readonly string TEMPORARY_TAX_LINE_ITEM_KEY = "avaTaxTemporaryLineItemKey";
+
 		/*
 		 ShipFrom	Origin	The origination address where the products were shipped from, or from where the services originated.
 		ShipTo	Destination	The destination address where the products were shipped to, or where the services were delivered.
