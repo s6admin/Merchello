@@ -2,6 +2,7 @@
 using Merchello.Core.Events;
 using Merchello.Core.Gateways.Taxation.AvaTax.Constants;
 using Merchello.Core.Models;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -61,25 +62,50 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 
 		public override Attempt<ITaxCalculationResult> CalculateTaxesForInvoice(string user, string pswd, bool quoteOnly = false)
 		{
-			ITaxationContext taxContext = MerchelloContext.Current.Gateways.Taxation;
-			
-			// S6 TODO This is a custom ED collection...where is it ultimately stored? Or is it temporary and then disposed? Invoices don't have ED collections, but their lineItems do
-			var extendedData = new ExtendedDataCollection();
-			
+
+			string transactionTypeLabel = quoteOnly ? "SalesOrder" : "SalesInvoice";
+			IEnumerable<ILineItem> taxLines = null;
+			ILineItem taxLine = null;
+
+			// NOTE: This becomes the tax lineItem ED collection
+			ExtendedDataCollection extendedData = null;
+
+			// If this is a final tax call to SalesInvoice attempt to retrieve the ED from the existing invoice tax line item so new values can be added to it, otherwise create an empty ED
+			if (!quoteOnly)
+			{
+				// TODO CONSIDER IF AVATAX ORDERS SHOULD RESULT IN MULTIPLE TAX LINE ITEMS OR JUST SPLIT THE VALUES BETWEEN THE PRODUCT LINE ITEMS...discuss with client as well
+				taxLines = Invoice.TaxLineItems();
+				if (taxLines != null && taxLines.Any())
+				{
+					taxLine = taxLines.First(); // TODO Current orders only have one tax line item, but that may change with AvaTax implementation
+					if(taxLine != null && taxLine.ExtendedData != null)
+					{
+						extendedData = taxLine.ExtendedData;
+					}
+				}
+			} 
+
+			if(extendedData == null)
+			{
+				extendedData = new ExtendedDataCollection();
+			}			
+						
 			if (Invoice.Key.Equals(Guid.Empty))
 			{
 				// DEPRECATED TODO Remove if temporary line item keys end up being sufficient
 				// Set a flag indicating the tax result has not yet been processed by the external provider so website project can respond if needed
 				// This becomes the invoice TaxLineItem ED collection
-				extendedData.SetValue(AvaTaxConstants.AWAITING_AVATAX_KEY, bool.TrueString);
+				//extendedData.SetValue(AvaTaxConstants.AWAITING_AVATAX_KEY, bool.TrueString);
 
 				//	// Success must be sent when the invoice is intially saved otherwise eComm will error
 				//	// TODO Consider passing an empty result if the taxMethod Name and extendedData collection are not required. That will make identifying empty results from valid 0% tax results easier
 				//return Attempt<ITaxCalculationResult>.Succeed(
 			    //	new TaxCalculationResult(_taxMethod.Name, 0, 0, extendedData)); // new TaxCalculationResult(0,0)); 
 
-			}  	
-					
+			}
+
+			TransactionModel tm = null;
+
 			if (AvaTaxApiHelper.Init(user, pswd))
 			{
 				try
@@ -90,8 +116,7 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 						//MerchelloContext.Current.Services.CustomerService
 					}
 
-					// Value of quoteOnly determines whether CreateSalesOrder or CreateInvoice is called
-					TransactionModel tm = null;
+					// Value of quoteOnly determines whether CreateSalesOrder or CreateInvoice is called					
 					if (quoteOnly)
 					{
 						tm = AvaTaxApiHelper.CreateSalesOrderTransaction(Invoice, c);
@@ -103,22 +128,54 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 					if (tm == null)
 					{
 						Exception ex = new Exception("NULL Transaction Model returned for Invoice " + Invoice.Key.ToString());
-						LogHelper.Error(typeof(AvaTaxCalculationStrategy), "AvaTax Create Sales Order failed. ", ex);
+						LogHelper.Error(typeof(AvaTaxCalculationStrategy), "AvaTax " + transactionTypeLabel + " failed. ", ex);
+
+						BroadcastFail(tm, quoteOnly);
 
 						return Attempt<ITaxCalculationResult>.Fail(ex);
 					}
-
-					// Fire SalesOrder Success event so front-end can handle any custom tasks						
-					OnSalesOrderSuccess.RaiseEvent(new ObjectEventArgs<TransactionModel>(tm), this);
-
+										
 					// S6 TODO Is baseTaxRate required by ALL Tax providers or just FixedRate, which is being phased out?
 					// Rate is returned from AvaTax in the summary collection and can have multiple values. Determine how to represent this (if necessary) within the ED collection
 					var baseTaxRate = 0; // tm.summary.First().rate ?? 0;
 					extendedData.SetValue(Core.Constants.ExtendedDataKeys.BaseTaxRate, baseTaxRate.ToString(CultureInfo.InvariantCulture));
-										
-					extendedData.SetValue(AvaTaxConstants.SALES_ORDER_KEY, tm); // TODO Track where this ED collection ultimately ends up
+
+					// Only include properties with actual values as part of the stored Json data
+					string tmData = string.Empty;
+
+					try
+					{
+						tmData = JsonConvert.SerializeObject(tm, Formatting.None,
+							   new JsonSerializerSettings { NullValueHandling = NullValueHandling.Ignore }
+					   		);
+					} catch(Exception ex)
+					{
+						LogHelper.Error(typeof(AvaTaxCalculationStrategy), "Error parsing AvaTax " + transactionTypeLabel + " Json. ", ex);
+					}
+
+					if (quoteOnly)
+					{
+						extendedData.SetValue(AvaTaxConstants.SALES_ORDER_KEY, tmData); 
+					} else
+					{
+						// Save to existing tax line item ED if available
+						if(taxLine != null)
+						{
+							taxLine.ExtendedData.SetValue(AvaTaxConstants.SALES_INVOICE_KEY, tmData);
+						} else
+						{
+							// The SalesInvoice transaction has still likely succeeded remotely so permit execution to continue	after logging issue						
+							Exception ex = new Exception("Could not locate tax line item for existing promise invoice " + Invoice.Key);
+							LogHelper.Error(typeof(AvaTaxCalculationStrategy), "Could not save SalesInvoice data to promise Invoice. ", ex);							
+							
+						}
+						// TODO Just save the SalesInvoice transaction Id since the data can be retrieved from the AvaTax API, unlike SalesOrders which are not recorded in their system
+						// extendedData.SetValue(AvaTaxConstants.SALES_INVOICE_KEY, tm.id.ToString());						
+					}					
 						
 					var visitor = new AvaTaxLineItemVisitor(tm);
+
+					Invoice.Items.Accept(visitor);
 
 					decimal totalTax = tm.totalTax ?? 0;
 
@@ -126,16 +183,26 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 					if (tm.totalTax == null) {
 						
 						Exception ex = new Exception("totalTax is NULL for transaction " + tm.id + " (" + tm.email + ") ");
-						LogHelper.Error(typeof(AvaTaxCalculationStrategy), "Warning: AvaTax transaction returned with NULL totalTax. ", ex);
-					}				
-												
+						LogHelper.Error(typeof(AvaTaxCalculationStrategy), "Warning: AvaTax " + transactionTypeLabel + " transaction returned with NULL totalTax. ", ex);
+					}
+
+					// If tax calculation is final (SalesInvoice), ensure the Invoice is saved
+					if (!quoteOnly)
+					{
+						MerchelloContext.Current.Services.InvoiceService.Save(Invoice, false); // TODO Consider if events are helpful here or not
+					}
+
+					BroadcastSuccess(tm, quoteOnly);
+
 					return Attempt<ITaxCalculationResult>.Succeed(
 						new TaxCalculationResult(_taxMethod.Name, baseTaxRate, totalTax, extendedData));
 					
 				}
 				catch (Exception ex)
 				{
-					LogHelper.Error(typeof(AvaTaxCalculationStrategy), "Error creating AvaTax SalesOrder Transaction. ", ex);
+					LogHelper.Error(typeof(AvaTaxCalculationStrategy), "Error creating AvaTax " + transactionTypeLabel + " Transaction. ", ex);
+
+					BroadcastFail(tm, quoteOnly);
 
 					return Attempt<ITaxCalculationResult>.Fail(ex);
 				}				
@@ -143,37 +210,44 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			{
 				Exception ex = new Exception("AvaTax service connection failed. Initialization method returned 'false'. ");
 
+				BroadcastFail(tm, quoteOnly);
+
 				return Attempt<ITaxCalculationResult>.Fail(ex);
+			}			
+		}
+
+		/// <summary>
+		/// Fire appropriate Success event for any external project handlers
+		/// </summary>
+		/// <param name="tm">The tm.</param>
+		/// <param name="quoteOnly">if set to <c>true</c> [quote only].</param>
+		private void BroadcastSuccess(TransactionModel tm, bool quoteOnly = true)
+		{			
+			if (quoteOnly)
+			{
+				OnSalesOrderSuccess.RaiseEvent(new ObjectEventArgs<TransactionModel>(tm), this);
 			}
-			
+			else
+			{
+				OnSalesInvoiceSuccess.RaiseEvent(new ObjectEventArgs<TransactionModel>(tm), this);
+			}
+		}
 
-			// S6 From FlatRate, for reference only
-			//try
-			//{
-			//	var baseTaxRate = _taxMethod.PercentageTaxRate;
-
-			//	// S6 TODO Is BaseTaxRate going to be the AvaTax Sales Order (estimate) result?
-			//	extendedData.SetValue(Core.Constants.ExtendedDataKeys.BaseTaxRate, baseTaxRate.ToString(CultureInfo.InvariantCulture));
-
-			//	if (_taxMethod.HasProvinces)
-			//	{
-			//		baseTaxRate = AdjustedRate(baseTaxRate, _taxMethod.Provinces.FirstOrDefault(x => x.Code == TaxAddress.Region), extendedData);
-			//	}
-
-			//	// S6 Visitor applies to each line item. AvaTax response is for the entire basket so we may need to distribute the result to each line Item
-			//	var visitor = new TaxableLineItemVisitor(baseTaxRate / 100);
-
-			//	Invoice.Items.Accept(visitor);
-				
-			//	var totalTax = visitor.TaxableLineItems.Sum(x => decimal.Parse(x.ExtendedData.GetValue(Core.Constants.ExtendedDataKeys.LineItemTaxAmount), CultureInfo.InvariantCulture));
-				
-			//	return Attempt<ITaxCalculationResult>.Succeed(
-			//		new TaxCalculationResult(_taxMethod.Name, baseTaxRate, totalTax, extendedData));
-			//}
-			//catch (Exception ex)
-			//{
-			//	return Attempt<ITaxCalculationResult>.Fail(ex);
-			//}
+		/// <summary>
+		/// Fire appropriate Fail event for any external project handlers
+		/// </summary>
+		/// <param name="tm">The tm.</param>
+		/// <param name="quoteOnly">if set to <c>true</c> [quote only].</param>
+		private void BroadcastFail(TransactionModel tm, bool quoteOnly = true)
+		{
+			if (quoteOnly)
+			{
+				OnSalesOrderFail.RaiseEvent(new ObjectEventArgs<TransactionModel>(tm), this);
+			}
+			else
+			{
+				OnSalesInvoiceFail.RaiseEvent(new ObjectEventArgs<TransactionModel>(tm), this);
+			}
 		}
 
 		/// <summary>

@@ -33,6 +33,7 @@
 	using Providers.Payment.PayTrace;
 	using Core;
 	using static Core.Constants;
+	using Core.Gateways.Taxation;
 
 	// S6 This is used for the PayTrace Redirect payment methods, not the Client-side Encryption JSON payment methods
 	// NOTE: The PayPal Express Checkout controller is located in Merchello.Web.Store.Controllers.Payment, not here in Merchello.FastTrack.Controllers.Payment like the other providers?
@@ -89,7 +90,10 @@
 				var ex = new NullReferenceException("PaymentMethod was null");
 				return HandlePaymentException(model, ex);
 			}
-						
+			//Guid invoiceKey = Guid.Empty;
+			//Guid.TryParse(model.OrderNumber, out invoiceKey);
+			//IInvoice invoice = MerchelloContext.Current.Services.InvoiceService.GetByKey(invoiceKey);
+			
 			/*
 				Redirect Providers MUST keep their basket contents until after payment is complete otherwise the checkout
 				workflow will break if the customer navigates backwards or their payment fails
@@ -98,7 +102,7 @@
 
 			// Rebuild model to capture Billing Address/Email details which are otherwise lost after the call to AuthorizePayment below
 			model = this.CheckoutPaymentModelFactory.Create(CurrentCustomer, paymentMethod); // This might be unnecessary now that OnFinalizing() call has been omitted
-
+			
 			/* 
 				S6
 				The default redirect provider implementation has a logic problem where the AuthorizePayment methods call OnFinalizing which
@@ -119,11 +123,26 @@
 
 			if (!attempt.Payment.Success)
 			{
-				LogHelper.Error(typeof(PayTraceRedirectPaymentController), "AuthorizePayment failed. ", attempt.Payment.Exception);								
+				LogHelper.Error(typeof(PayTraceRedirectPaymentController), "AuthorizePayment Promise failed. ", attempt.Payment.Exception);								
 				return CurrentUmbracoPage();			
 			}
+
 			// Pay Pal Express sets InvoiceKey on payment success but since client will accept orders even with failed payments, the invoiceKey should ALWAYS be set
 			CustomerContext.SetValue("invoiceKey", attempt.Invoice.Key.ToString());
+
+			#region Finalize Taxes
+
+			// Create final tax record when order is confirmed by customer (before payment attempt).
+			ITaxationContext taxContext = MerchelloContext.Current.Gateways.Taxation;
+			ITaxCalculationResult taxResult = taxContext.CalculateTaxesForInvoice(attempt.Invoice, false); // Finalize tax calculation (will invoke submission to any third party providers)
+
+			if (taxResult == null)
+			{
+				// Error with tax call
+				// TODO Handle for front-end, raiseEvent or bypass payment provider
+			}
+			
+			#endregion Finalize Taxes
 
 			string redirectUrl = string.Empty;
 			if (attempt.RedirectUrl != null && attempt.RedirectUrl.Length > 0)

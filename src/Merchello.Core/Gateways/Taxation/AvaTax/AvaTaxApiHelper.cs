@@ -157,7 +157,7 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			#endregion Products / Line Items
 		}
 
-		private static Guid GetLineItemAvaTaxKey(ILineItem li, bool quoteOnly = true)
+		public static Guid GetLineItemAvaTaxKey(ILineItem li, bool quoteOnly = true)
 		{
 			Guid g = Guid.Empty;
 
@@ -311,17 +311,14 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			string customerCode = DetermineCustomerCode(i, customer);
 			
 			TransactionModel tm = null;
-			var tb = new TransactionBuilder(client, AvaTaxConstants.COMPANY_CODE, DocumentType.SalesOrder, customerCode);			
+			var tb = new TransactionBuilder(client, AvaTaxConstants.COMPANY_CODE, DocumentType.SalesInvoice, customerCode);			
 			tb.WithPurchaseOrderNumber(i.Key.ToString());
 			tb.WithDate(DateTime.Now);
-			//tb.GetCreateTransactionModel() // S6 for any additional changes before calling AvaTax API
-
+			
 			SetAddresses(tb, i);
 
 			SetProducts(tb, i);
-
-			tb.WithCommit(); // SalesInvoice flagged with commit
-
+			
 			#region Call API
 
 			if (tb != null)
@@ -331,7 +328,7 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 					LogHelper.Warn(typeof(AvaTaxApiHelper), "AvaTax SalesInvoice attempt for Invoice " + i.Key + " email " + i.BillToEmail);
 
 					tm = tb.Create();
-
+					
 					LogHelper.Warn(typeof(AvaTaxApiHelper), "AvaTax SalesInvoice success response " + tm.id + " for Invoice " + i.Key);
 
 					return tm;

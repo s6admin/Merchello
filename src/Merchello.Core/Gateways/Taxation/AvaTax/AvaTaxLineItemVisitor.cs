@@ -55,35 +55,58 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			
 			// If lineItem isn't marked taxable, skip it, otherwise continue below
 			if (!lineItem.ExtendedData.GetTaxableValue()) return;
-						
-			// TODO PROBLEM: Without lineItem keys invoices with multiple lineItems of the same product won't be distinguishable from each other
-			string avaItemCode = string.Empty;
+
+			#region Retrieve ItemTaxCode from Product/Variant
+
+			string avaItemTaxCode = string.Empty;
 			if(lineItem.ExtendedData != null && lineItem.ExtendedData.ContainsKey(AvaTaxConstants.ITEM_CODE_KEY)) 
 			{
-				avaItemCode = lineItem.ExtendedData.GetValue(AvaTaxConstants.ITEM_CODE_KEY);
+				avaItemTaxCode = lineItem.ExtendedData.GetValue(AvaTaxConstants.ITEM_CODE_KEY);
 			}
 
-			if (string.IsNullOrEmpty(avaItemCode))
+			if (string.IsNullOrEmpty(avaItemTaxCode))
 			{
-				avaItemCode = GetAvaTaxCodeForLineItem(lineItem);
-				
+				avaItemTaxCode = GetAvaTaxCodeForLineItem(lineItem);				
 			}
 
-			// TODO DEV TESTING ONLY, temporary Item Code value until they are added to the SMO dashboard Product DocType
-			if (string.IsNullOrEmpty(avaItemCode))
+			// TODO DEV TESTING ONLY, temporary Item Code value until they are all added to the SMO dashboard Product DocType
+			if (string.IsNullOrEmpty(avaItemTaxCode))
 			{
-				avaItemCode = "testItemCode123_TODO";
+				avaItemTaxCode = "testItemCode123_TODO";
 			}
 
-			// Identify AvaTax Line object for the current Invoice lineItem
-			TransactionLineModel avaLine = tm.lines.FirstOrDefault(x => x.itemCode == avaItemCode);
+			#endregion Retrieve ItemTaxCode from Product/Variant
 
-			if(avaLine == null)
+			// Identify AvaTax Line object in TransactionModel for the current Invoice lineItem
+			Guid liKey = lineItem.Key; // Check for native lineItem Key first (will be available for SalesInvoice calls, but not for SalesOrder estimates)
+
+			// If native Key isn't available, check for temporary lineItem key
+			if (liKey.Equals(Guid.Empty) && lineItem.ExtendedData.ContainsKey(AvaTaxConstants.TEMPORARY_TAX_LINE_ITEM_KEY))
 			{
-				Exception ex = new Exception("No AvaTax line model found for itemCode " + avaItemCode + " in lineItem " + lineItem.Key.ToString());
+				Guid.TryParse(lineItem.ExtendedData.GetValue(AvaTaxConstants.TEMPORARY_TAX_LINE_ITEM_KEY), out liKey);
+			}
+
+			// If lineItem Key is still empty, lineItem data can't be transfered from TransactionModel to invoice lineItem
+			if (liKey.Equals(Guid.Empty))
+			{
+				// Can't reliably determine matching data from AvaTax TransactionModel for current invoice line item
+				Exception ex = new Exception("LineItem Key could not be determined for lineItem (containerKey: " + lineItem.ContainerKey + "). Skipping data transfer from TransactionModel line object to invoice lineItem. ");
+				LogHelper.Error(typeof(AvaTaxLineItemVisitor), "LineItem Key not found. ", ex);
+
+				// TODO Handle a failed line item - retry and if still fails mark as incomplete/pending
+
+				return;
+			}
+
+			//TransactionLineModel avaLine = tm.lines.FirstOrDefault(x => x.taxCode == avaItemTaxCode); // TaxCode isn't guarenteed unique within a single transaction since customers can purchase multiple line items containing the same product
+			TransactionLineModel avaLine = tm.lines.FirstOrDefault(x => x.lineNumber == liKey.ToString());
+
+			if (avaLine == null)
+			{
+				Exception ex = new Exception("No AvaTax line model found for ItemTaxCode " + avaItemTaxCode + " in lineItem " + liKey.ToString());
 				LogHelper.Error(typeof(AvaTaxLineItemVisitor), "Error finding AvaTax line for invoice lineItem. ", ex);
 
-				// TODO How to handle a failed line item?
+				// TODO Handle a failed line item - retry and if still fails mark as incomplete/pending
 
 				return;
 			}
@@ -101,7 +124,7 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 				if (avaLine.taxCalculated == null)
 				{
 					// TODO Don't assume NULL taxCalculated should remain as 0
-					Exception ex = new Exception("AvaTax calculated tax is NULL for itemCode " + avaItemCode + " in lineItem " + lineItem.Key.ToString());
+					Exception ex = new Exception("AvaTax calculated tax is NULL for itemTaxCode " + avaItemTaxCode + " in lineItem " + liKey.ToString());
 					LogHelper.Error(typeof(AvaTaxLineItemVisitor), "Error retrieving calculated tax from AvaTax response for invoice lineItem. ", ex);
 
 					return;
@@ -111,7 +134,7 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 				lineItem.ExtendedData.SetValue(Core.Constants.ExtendedDataKeys.LineItemTaxAmount, lineTax.ToString(CultureInfo.InvariantCulture));
 
 				// Save entire avaLine data to ED collection if needed for later reference(s)
-				lineItem.ExtendedData.SetValue(AvaTaxConstants.TRANSACTION_LINE, JsonConvert.SerializeObject(avaLine)); // TODO Confirm serialization succeeds with full test data
+				lineItem.ExtendedData.SetValue(AvaTaxConstants.TRANSACTION_LINE, JsonConvert.SerializeObject(avaLine));
 
 				/* Some available properties that may be helpful
 					avaLine.details[#].rate -- one details object per tax authority
@@ -121,7 +144,7 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 					avaLine.taxCodeId
 					avaLine.taxEngine
 				*/
-				// TODO There are going to be MULTIPLE objects in the detail collection...how should a baseTaxRate be determined?
+				// Set baseTaxRate if there is only a single detail entry for the current product/lineItem, otherwise keep baseTaxRate as default
 				if (avaLine.details != null && avaLine.details.Count == 1)
 				{
 					lineItem.ExtendedData.SetValue(Core.Constants.ExtendedDataKeys.BaseTaxRate, avaLine.details.First().rate.ToString());
@@ -155,7 +178,14 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax
 			if(pv.DetachedContents != null && pv.DetachedContents.Any())
 			{
 				// TODO v.1.5 Pass this DocType value from front-end project instead of having the Tax provider inherintely know about it
-				taxCode = pv.DetachedContents.First().DetachedDataValues.FirstOrDefault(x => x.Key == "avaTaxProductCode").Value; // TODO AvaTaxConstants.AvaTaxProductCodeDocTypePropertyAlias
+				try
+				{
+					taxCode = pv.DetachedContents.First().DetachedDataValues.FirstOrDefault(x => x.Key == "avaTaxProductCode").Value; // TODO AvaTaxConstants.AvaTaxProductCodeDocTypePropertyAlias
+				} catch(Exception ex)
+				{
+					// Error retrieving avaTaxProductCode
+					LogHelper.Error(typeof(AvaTaxLineItemVisitor), "Error retrieving avaTaxProductCode for ProductVariant " + pv.Key + " of Product " + pv.ProductKey + ". ", ex);
+				}				
 			}
 
 			return taxCode;

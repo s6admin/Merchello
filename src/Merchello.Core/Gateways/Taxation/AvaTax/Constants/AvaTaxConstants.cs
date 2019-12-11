@@ -22,9 +22,14 @@ namespace Merchello.Core.Gateways.Taxation.AvaTax.Constants
 		public static readonly string ITEM_CODE_KEY = "AVA_ITEM_CODE";
 
 		/// <summary>
-		/// Dictionary Key for retrieving an AvaTax Sales Order Transaction Model stored in an ExtendedData collection
+		/// Dictionary Key for retrieving an AvaTax SalesOrder Transaction Model stored in an ExtendedData collection
 		/// </summary>
 		public static readonly string SALES_ORDER_KEY = "AVA_SALES_ORDER";
+
+		/// <summary>
+		/// Dictionary Key for retrieving an AvaTax SalesInvoice Transaction Model stored in an ExtendedData collection
+		/// </summary>
+		public static readonly string SALES_INVOICE_KEY = "AVA_SALES_INVOICE";
 
 		/// <summary>
 		/// Dictionary key for retrieving an AvaTax Sales Order TransactionLineModel stored in an eComm Invoice LineItem ExtendedData collection

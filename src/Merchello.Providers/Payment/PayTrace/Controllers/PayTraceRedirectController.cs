@@ -106,10 +106,7 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			}
 
 			var invoice = GetInvoiceByKey(r.InvoiceKey); // GetInvoiceByKey(r.OrderId); v2 use new InvoiceKey
-
-			ITaxationContext taxContext = MerchelloContext.Current.Gateways.Taxation;
-			taxContext.CalculateTaxesForInvoice(invoice, false); // Finalize tax calculation (will invoke submission to any third party providers)
-
+			
 			OnSuccess.RaiseEvent(new PaymentAttemptEventArgs<PayTraceRedirectResponse>(r), this);			
 			
 			//var cm = CustomerContext.CurrentCustomer.Basket().GetCheckoutManager(MerchelloConfiguration.Current.CheckoutContextSettings);
