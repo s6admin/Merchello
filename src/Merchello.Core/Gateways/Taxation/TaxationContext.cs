@@ -34,19 +34,48 @@
         /// </summary>
         private TaxationApplication _taxationApplication;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="TaxationContext"/> class.
-        /// </summary>
-        /// <param name="gatewayProviderService">
-        /// The gateway provider service.
-        /// </param>
-        /// <param name="storeSettingService">
-        /// The <see cref="IStoreSettingService"/>
-        /// </param>
-        /// <param name="resolver">
-        /// The resolver.
-        /// </param>
-        public TaxationContext(IGatewayProviderService gatewayProviderService, IStoreSettingService storeSettingService, IGatewayProviderResolver resolver)
+		private string _taxProviderUser = string.Empty;
+		private string _taxProviderPassword = string.Empty;
+
+		public string TaxationProviderUsername
+		{
+			get
+			{
+				return _taxProviderUser;
+			}
+
+			set
+			{
+				_taxProviderUser = value;
+			}
+		}
+
+		public string TaxationProviderPassword
+		{
+			get
+			{
+				return _taxProviderPassword;
+			}
+
+			set
+			{
+				_taxProviderPassword = value;
+			}
+		}
+
+		/// <summary>
+		/// Initializes a new instance of the <see cref="TaxationContext"/> class.
+		/// </summary>
+		/// <param name="gatewayProviderService">
+		/// The gateway provider service.
+		/// </param>
+		/// <param name="storeSettingService">
+		/// The <see cref="IStoreSettingService"/>
+		/// </param>
+		/// <param name="resolver">
+		/// The resolver.
+		/// </param>
+		public TaxationContext(IGatewayProviderService gatewayProviderService, IStoreSettingService storeSettingService, IGatewayProviderResolver resolver)
             : base(gatewayProviderService, resolver)
         {
             Mandate.ParameterNotNull(storeSettingService, "storeSettingService");
@@ -170,6 +199,46 @@
             return gatewayTaxMethod.CalculateTaxForInvoice(invoice, taxAddress);
         }
 
+		/// <summary>
+		/// S6 Custom method for calculating invoice taxes using a third party service which requires authentication.
+		/// </summary>
+		/// <param name="invoice">The invoice.</param>
+		/// <param name="taxAddress">The tax address.</param>
+		/// <param name="quoteOnly">if set to <c>true</c> [quote only].</param>
+		/// <param name="user">The user.</param>
+		/// <param name="pswd">The PSWD.</param>
+		/// <returns></returns>
+		public ITaxCalculationResult CalculateTaxesForInvoice(IInvoice invoice, string user, string pswd, bool quoteOnly = false)
+		{
+			var taxAddress = invoice.GetBillingAddress();
+
+			if (string.IsNullOrWhiteSpace(user))
+			{
+				Exception ex = new Exception("Missing username during tax calculation request for invoice " + invoice.Key.ToString());
+				LogHelper.Error(typeof(TaxationContext), "This tax provider requires validation. Could not attempt tax calculation for invoice. ", ex);
+				return null;
+			}
+
+			if (string.IsNullOrWhiteSpace(pswd))
+			{
+				Exception ex = new Exception("Missing password during tax calculation request for invoice " + invoice.Key.ToString());
+				LogHelper.Error(typeof(TaxationContext), "This tax provider requires validation. Could not attempt tax calculation for invoice. ", ex);
+				return null;
+			}
+
+			var providersKey =
+				GatewayProviderService.GetTaxMethodsByCountryCode(taxAddress.CountryCode)
+									  .Select(x => x.ProviderKey).FirstOrDefault();
+
+			if (Guid.Empty.Equals(providersKey)) return new TaxCalculationResult(0, 0);
+
+			var provider = GatewayProviderResolver.GetProviderByKey<TaxationGatewayProviderBase>(providersKey);
+
+			var gatewayTaxMethod = provider.GetGatewayTaxMethodByCountryCode(taxAddress.CountryCode);
+
+			return gatewayTaxMethod.CalculateTaxForInvoice(invoice, taxAddress, user, pswd);
+		}
+
         /// <summary>
         /// Calculates taxes based on a product.
         /// </summary>
@@ -220,6 +289,16 @@
             return GatewayProviderService.GetTaxMethodsByCountryCode(countryCode).FirstOrDefault();
         }
 
+		///// <summary>
+		///// If a tax provider requires authentication, pass the credentials here before calling CalculateTaxesForInvoice
+		///// </summary>
+		///// <param name="user">The user.</param>
+		///// <param name="pswd">The PSWD.</param>
+		//public void SetTaxProviderAuthentication(string user, string pswd)
+		//{
+		//	_taxProviderUser = user;
+		//	_taxProviderPassword = pswd;
+		//}
 
         /// <summary>
         /// Resets the product pricing method to null so that it can be required.

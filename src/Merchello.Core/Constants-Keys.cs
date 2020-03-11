@@ -264,19 +264,30 @@
                 }
             }
 
-            /// <summary>
-            /// The taxation gateway provider keys.
-            /// </summary>
-            public static class Taxation
-            {
-                /// <summary>
-                /// Gets the fixed rate taxation provider key.
-                /// </summary>
-                public static Guid FixedRateTaxationProviderKey
-                {
-                    get { return new Guid("A4AD4331-C278-4231-8607-925E0839A6CD"); }
-                }				
-            }
+			/// <summary>
+			/// The taxation gateway provider keys.
+			/// </summary>
+			public static class Taxation
+			{
+				/// <summary>
+				/// Gets the fixed rate taxation provider key.
+				/// </summary>
+				public static Guid FixedRateTaxationProviderKey
+				{
+					get { return new Guid("A4AD4331-C278-4231-8607-925E0839A6CD"); }
+				}
+
+				/// <summary>
+				/// S6 Gets or sets the ava tax provider key.
+				/// </summary>
+				/// <value>
+				/// The ava tax provider key.
+				/// </value>
+				public static Guid AvaTaxProviderKey
+				{
+					get { return new Guid("ab977f46-0121-49f9-b7d4-15c5e39df14f"); }
+				}
+			}
 
             /// <summary>
             /// The payment gateway provider keys.

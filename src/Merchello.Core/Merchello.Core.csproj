@@ -61,6 +61,10 @@
       <HintPath>..\packages\AutoMapper.3.3.1\lib\net40\AutoMapper.Net4.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="Avalara.AvaTax.RestClient.net45, Version=19.10.0.0, Culture=neutral, PublicKeyToken=c182a1af4964ace4, processorArchitecture=MSIL">
+      <HintPath>..\packages\Avalara.AvaTax.19.10.0\lib\net45\Avalara.AvaTax.RestClient.net45.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
     <Reference Include="businesslogic">
       <HintPath>..\packages\UmbracoCms.Core.7.5.8\lib\businesslogic.dll</HintPath>
       <Private>True</Private>
@@ -379,6 +383,15 @@
     <Compile Include="CurrencyContext.cs" />
     <Compile Include="CurrencyHelper.cs" />
     <Compile Include="EntityCollections\IEntityCollectionProviderMeta.cs" />
+    <Compile Include="Gateways\Taxation\AvaTax\AvaTaxApiHelper.cs" />
+    <Compile Include="Gateways\Taxation\AvaTax\AvaTaxCalculationStrategy.cs" />
+    <Compile Include="Gateways\Taxation\AvaTax\AvaTaxGatewayProvider.cs" />
+    <Compile Include="Gateways\Taxation\AvaTax\AvaTaxGatewayMethod.cs" />
+    <Compile Include="Gateways\Taxation\AvaTax\AvaTaxLineItemVisitor.cs" />
+    <Compile Include="Gateways\Taxation\AvaTax\Constants\AvaTaxConstants.cs" />
+    <Compile Include="Gateways\Taxation\AvaTax\Controllers\AvaTaxController.cs" />
+    <Compile Include="Gateways\Taxation\AvaTax\IAvaTaxGatewayMethod.cs" />
+    <Compile Include="Gateways\Taxation\AvaTax\IAvaTaxGatewayProvider.cs" />
     <Compile Include="Logging\IRemoteLogger.cs" />
     <Compile Include="Models\EntityBase\IDateStamped.cs" />
     <Compile Include="Models\Interfaces\IDeepCloneable.cs" />

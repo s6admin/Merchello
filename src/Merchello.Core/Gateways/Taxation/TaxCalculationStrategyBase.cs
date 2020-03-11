@@ -60,5 +60,13 @@
         /// The <see cref="ITaxCalculationResult"/>
         /// </returns>
         public abstract Attempt<ITaxCalculationResult> CalculateTaxesForInvoice();
+
+		/// <summary>
+		/// Calculates the taxes for invoice.
+		/// </summary>
+		/// <param name="user">The user.</param>
+		/// <param name="pswd">The PSWD.</param>
+		/// <returns></returns>
+		public abstract Attempt<ITaxCalculationResult> CalculateTaxesForInvoice(string user, string pswd);
     }
 }

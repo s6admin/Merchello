@@ -52,5 +52,15 @@
         /// The <see cref="ITaxCalculationResult"/>
         /// </returns>
         ITaxCalculationResult CalculateTaxForInvoice(ITaxCalculationStrategy strategy);
-    }
+
+		/// <summary>
+		/// S6 Custom override method for calculating invoice taxes that use a third party service which requires authentication.
+		/// </summary>
+		/// <param name="invoice">The invoice.</param>
+		/// <param name="taxAddress">The tax address.</param>
+		/// <param name="user">The user.</param>
+		/// <param name="pswd">The PSWD.</param>
+		/// <returns></returns>
+		ITaxCalculationResult CalculateTaxForInvoice(IInvoice invoice, IAddress taxAddress, string user, string pswd);
+	}
 }
