@@ -383,15 +383,6 @@
     <Compile Include="CurrencyContext.cs" />
     <Compile Include="CurrencyHelper.cs" />
     <Compile Include="EntityCollections\IEntityCollectionProviderMeta.cs" />
-    <Compile Include="Gateways\Taxation\AvaTax\AvaTaxApiHelper.cs" />
-    <Compile Include="Gateways\Taxation\AvaTax\AvaTaxCalculationStrategy.cs" />
-    <Compile Include="Gateways\Taxation\AvaTax\AvaTaxGatewayProvider.cs" />
-    <Compile Include="Gateways\Taxation\AvaTax\AvaTaxGatewayMethod.cs" />
-    <Compile Include="Gateways\Taxation\AvaTax\AvaTaxLineItemVisitor.cs" />
-    <Compile Include="Gateways\Taxation\AvaTax\Constants\AvaTaxConstants.cs" />
-    <Compile Include="Gateways\Taxation\AvaTax\Controllers\AvaTaxController.cs" />
-    <Compile Include="Gateways\Taxation\AvaTax\IAvaTaxGatewayMethod.cs" />
-    <Compile Include="Gateways\Taxation\AvaTax\IAvaTaxGatewayProvider.cs" />
     <Compile Include="Logging\IRemoteLogger.cs" />
     <Compile Include="Models\EntityBase\IDateStamped.cs" />
     <Compile Include="Models\Interfaces\IDeepCloneable.cs" />

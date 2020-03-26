@@ -201,16 +201,13 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			//Console.WriteLine(cm);
 
 			Basket.Empty();
-			/*
-				WARNING
-				Reset is called in SilentResponse regardless of success or decline payment result. 
-				Do NOT call reset again here as it causes unpredictable results to the customer context and receipt page!
-			*/
+			
 			ResetAllCheckoutData();
 			
 			// Ensure invoiceKey is present in the CustomerContext in case resetting the Customer or CheckoutManager causes it to get lost
 			if(invoice != null)
 			{
+				// TODO Void payment necessary or keep promise payment intact?
 				//try
 				//{
 
@@ -248,7 +245,7 @@ namespace Merchello.Providers.Payment.PayTrace.Controllers
 			return Redirect(redirecting.RedirectingToUrl);
 		}
 
-		// The Url hooked by the PayTrace Redirect silent response (in ALL success or fail cases). This is not a conventional Payment Provider workflow so try to avoid doing anything eComm-related (Customer, Basket, etc...) other than capturing a payment
+		// The Url hooked by the PayTrace Redirect silent response in ALL success or fail cases. This is not a conventional Payment Provider workflow so try to avoid doing anything eComm-related (Customer, Basket, etc...) other than capturing a payment
 		public void PayTraceSilentResponse(string parmList)
 		{
 			// NOTE: Customer/Basket contexts are out of scope here so any actions related to checkout don't do anything. Use Success() instead for tasks like resetting CheckoutManager and the basket.
